@@ -1,0 +1,1231 @@
+{% extends "base.html" %} {% block title %}Reportes y Analytics{% endblock %} {%
+block content %}
+<!-- Contenedor para mensajes personalizados -->
+<div
+  id="custom-alerts-container"
+  class="position-fixed top-0 end-0 p-3"
+  style="z-index: 9999; max-width: 400px"
+></div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-chart-bar title-icon"></i>
+    <h2 class="page-title mb-0">Reportes y Analytics</h2>
+  </div>
+  <button class="btn-modern btn-primary" id="btnExportar">
+    <i class="fas fa-download me-1"></i>Exportar
+  </button>
+</div>
+
+<!-- Cards de Métricas Principales -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-lg-6 col-md-6">
+    <div class="card-dark metric-card">
+      <div class="card-body-dark p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h4 id="kpiAdherencia" class="mb-1 text-primary">--%</h4>
+            <p class="mb-0 small text-muted-dark">Tasa Adherencia</p>
+          </div>
+          <div class="metric-icon">
+            <i class="fas fa-calendar-check fa-2x text-primary opacity-50"></i>
+          </div>
+        </div>
+        <div class="metric-trend mt-2">
+          <small class="text-success" id="trendAdherencia">
+            <i class="fas fa-arrow-up me-1"></i>Cargando...
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-lg-6 col-md-6">
+    <div class="card-dark metric-card">
+      <div class="card-body-dark p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h4 id="kpiSesiones" class="mb-1 text-success">--</h4>
+            <p class="mb-0 small text-muted-dark">Sesiones Completadas</p>
+          </div>
+          <div class="metric-icon">
+            <i class="fas fa-stethoscope fa-2x text-success opacity-50"></i>
+          </div>
+        </div>
+        <div class="metric-trend mt-2">
+          <small class="text-success" id="trendSesiones">
+            <i class="fas fa-arrow-up me-1"></i>Cargando...
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-lg-6 col-md-6">
+    <div class="card-dark metric-card">
+      <div class="card-body-dark p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h4 id="kpiNoShows" class="mb-1 text-warning">--</h4>
+            <p class="mb-0 small text-muted-dark">No-Shows</p>
+          </div>
+          <div class="metric-icon">
+            <i class="fas fa-user-times fa-2x text-warning opacity-50"></i>
+          </div>
+        </div>
+        <div class="metric-trend mt-2">
+          <small class="text-danger" id="trendNoShows">
+            <i class="fas fa-arrow-down me-1"></i>Cargando...
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-lg-6 col-md-6">
+    <div class="card-dark metric-card">
+      <div class="card-body-dark p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h4 id="kpiOcupacion" class="mb-1 text-info">--%</h4>
+            <p class="mb-0 small text-muted-dark">Ocupación Promedio</p>
+          </div>
+          <div class="metric-icon">
+            <i class="fas fa-chart-pie fa-2x text-info opacity-50"></i>
+          </div>
+        </div>
+        <div class="metric-trend mt-2">
+          <small class="text-success" id="trendOcupacion">
+            <i class="fas fa-arrow-up me-1"></i>Cargando...
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros Compactos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark">
+            <i class="fas fa-calendar"></i>
+          </span>
+          <input
+            type="date"
+            class="form-control-dark form-control-sm"
+            id="fechaDesde"
+            value="{{ now.replace(day=1).strftime('%Y-%m-%d') }}"
+          />
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark">
+            <i class="fas fa-calendar"></i>
+          </span>
+          <input
+            type="date"
+            class="form-control-dark form-control-sm"
+            id="fechaHasta"
+            value="{{ now.strftime('%Y-%m-%d') }}"
+          />
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="d-flex gap-2">
+          <button
+            type="button"
+            class="btn-modern btn-primary btn-sm flex-fill"
+            id="btnActualizar"
+          >
+            <i class="fas fa-sync-alt me-1"></i>Actualizar
+          </button>
+          <button
+            type="button"
+            class="btn-modern btn-outline btn-sm"
+            id="btnResetFiltros"
+          >
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Selector de Reportes -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-2">
+    <div class="d-flex flex-wrap gap-2" id="reportSelector">
+      <button
+        class="btn-modern btn-outline btn-sm active"
+        data-chart="adherencia"
+      >
+        <i class="fas fa-calendar-check me-1"></i>Adherencia
+      </button>
+      <button class="btn-modern btn-outline btn-sm" data-chart="noshow">
+        <i class="fas fa-user-times me-1"></i>No-Shows
+      </button>
+      <button class="btn-modern btn-outline btn-sm" data-chart="capacidad">
+        <i class="fas fa-chart-pie me-1"></i>Capacidad
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficas -->
+<div class="row g-4">
+  <!-- Gráfica Principal -->
+  <div class="col-xxl-8 col-xl-8 col-lg-12">
+    <div class="card-dark h-100">
+      <div class="card-header-dark py-2">
+        <h6 class="mb-0 card-title-dark" id="chartTitle">
+          Adherencia por Paciente
+        </h6>
+      </div>
+      <div class="card-body-dark">
+        <div id="chartContainer" style="height: 400px; min-width: 100%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Métricas Secundarias -->
+  <div class="col-xxl-4 col-xl-4 col-lg-12">
+    <div class="card-dark h-100">
+      <div class="card-header-dark py-2">
+        <h6 class="mb-0 card-title-dark">Resumen Detallado</h6>
+      </div>
+      <div class="card-body-dark">
+        <div class="metric-detail-list" id="metricasDetalladas">
+          <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2 text-muted-dark small">Cargando métricas...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cards de Insights -->
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card-dark insight-card">
+      <div class="card-body-dark">
+        <div class="d-flex align-items-start">
+          <div class="insight-icon me-3 text-success">
+            <i class="fas fa-trophy fa-lg"></i>
+          </div>
+          <div>
+            <h6 class="mb-1 card-title-dark">Mejor Desempeño</h6>
+            <p class="mb-1 small text-muted-dark" id="mejorDesempeno">
+              Cargando datos...
+            </p>
+            <small class="text-success" id="trendMejor">
+              <i class="fas fa-arrow-up me-1"></i>Calculando...
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card-dark insight-card">
+      <div class="card-body-dark">
+        <div class="d-flex align-items-start">
+          <div class="insight-icon me-3 text-warning">
+            <i class="fas fa-exclamation-triangle fa-lg"></i>
+          </div>
+          <div>
+            <h6 class="mb-1 card-title-dark">Área de Mejora</h6>
+            <p class="mb-1 small text-muted-dark" id="areaMejora">
+              Cargando datos...
+            </p>
+            <small class="text-warning" id="trendMejora">
+              <i class="fas fa-clock me-1"></i>Analizando...
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<!-- Incluir Highcharts -->
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/heatmap.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/export-data.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+
+<script>
+  // Función para mostrar notificaciones personalizadas
+  function showNotification(message, type) {
+    const container = document.getElementById("custom-alerts-container");
+    if (!container) {
+      console.error("No se encontró el contenedor de alertas");
+      return;
+    }
+
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${
+      type === "error" ? "danger" : "success"
+    } alert-dismissible fade show custom-alert mb-2`;
+    alertDiv.style.maxWidth = "350px";
+    alertDiv.style.width = "100%";
+    alertDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    alertDiv.style.border = "none";
+    alertDiv.style.borderRadius = "8px";
+    alertDiv.style.fontSize = "0.875rem";
+
+    const icon = type === "error" ? "exclamation-triangle" : "check-circle";
+    const title = type === "error" ? "Error" : "Éxito";
+
+    alertDiv.innerHTML = `
+      <div class="d-flex align-items-start">
+        <i class="fas fa-${icon} mt-1 me-2 ${
+      type === "error" ? "text-danger" : "text-success"
+    }" style="flex-shrink: 0;"></i>
+        <div class="flex-grow-1" style="min-width: 0;">
+          <strong class="d-block mb-1">${title}</strong>
+          <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+      </div>
+    `;
+
+    container.insertBefore(alertDiv, container.firstChild);
+
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+      }
+    }, 5000);
+  }
+
+  let chart;
+  let currentChartType = "adherencia";
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Configurar botones de cambio de gráfica
+    document.querySelectorAll("[data-chart]").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        document
+          .querySelectorAll("[data-chart]")
+          .forEach((b) => b.classList.remove("active"));
+        this.classList.add("active");
+        currentChartType = this.dataset.chart;
+        actualizarTituloGrafica();
+        cargarGrafica();
+      });
+    });
+
+    // Configurar botón actualizar
+    document
+      .getElementById("btnActualizar")
+      .addEventListener("click", function () {
+        cargarTodasLasMetricas();
+        cargarGrafica();
+      });
+
+    // Configurar botón reset
+    document
+      .getElementById("btnResetFiltros")
+      .addEventListener("click", resetFiltros);
+
+    // Configurar botón exportar
+    document
+      .getElementById("btnExportar")
+      .addEventListener("click", exportarReporte);
+
+    // Cargar datos iniciales
+    cargarTodasLasMetricas();
+    actualizarTituloGrafica();
+    cargarGrafica();
+  });
+
+  function cargarTodasLasMetricas() {
+    cargarMetricasPrincipales();
+    cargarResumenDetallado();
+    cargarInsights();
+  }
+
+  function actualizarTituloGrafica() {
+    const titulos = {
+      adherencia: "Adherencia por Paciente",
+      noshow: "No-Shows por Causa y Profesional",
+      capacidad: "Ocupación por Sala y Franja Horaria",
+    };
+    document.getElementById("chartTitle").textContent =
+      titulos[currentChartType] || "Reporte";
+  }
+
+  function cargarMetricasPrincipales() {
+    const desde = document.getElementById("fechaDesde").value;
+    const hasta = document.getElementById("fechaHasta").value;
+
+    console.log("Cargando métricas principales...");
+
+    // Usar la ruta correcta del API - /api/reportes/metricas-principales
+    fetch(`/api/reportes/metricas-principales?desde=${desde}&hasta=${hasta}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Datos de métricas principales recibidos:", data);
+
+        // Actualizar KPI de Adherencia
+        if (data.adherencia !== undefined) {
+          document.getElementById("kpiAdherencia").textContent =
+            data.adherencia.toFixed(1) + "%";
+
+          const trendAdherencia = document.getElementById("trendAdherencia");
+          if (data.adherencia >= 80) {
+            trendAdherencia.className = "text-success";
+            trendAdherencia.innerHTML = `<i class="fas fa-arrow-up me-1"></i>Meta cumplida (${
+              data.trend_adherencia > 0 ? "+" : ""
+            }${data.trend_adherencia}%)`;
+          } else {
+            trendAdherencia.className = "text-warning";
+            trendAdherencia.innerHTML = `<i class="fas fa-exclamation me-1"></i>Por debajo de meta`;
+          }
+        }
+
+        // Actualizar KPI de Sesiones
+        if (data.sesiones_completadas !== undefined) {
+          document.getElementById("kpiSesiones").textContent =
+            data.sesiones_completadas;
+
+          document.getElementById(
+            "trendSesiones"
+          ).innerHTML = `<i class="fas fa-check me-1"></i>${
+            data.trend_sesiones > 0 ? "+" : ""
+          }${data.trend_sesiones}% vs período anterior`;
+        }
+
+        // Actualizar KPI de No-Shows
+        if (data.no_shows !== undefined) {
+          document.getElementById("kpiNoShows").textContent = data.no_shows;
+
+          const trendNoShows = document.getElementById("trendNoShows");
+          if (data.trend_noshows < 0) {
+            trendNoShows.className = "text-success";
+            trendNoShows.innerHTML = `<i class="fas fa-arrow-down me-1"></i>${data.trend_noshows}% reducción`;
+          } else {
+            trendNoShows.className = "text-danger";
+            trendNoShows.innerHTML = `<i class="fas fa-arrow-up me-1"></i>${data.trend_noshows}% incremento`;
+          }
+        }
+
+        // Actualizar KPI de Ocupación
+        if (data.ocupacion_promedio !== undefined) {
+          document.getElementById("kpiOcupacion").textContent =
+            data.ocupacion_promedio.toFixed(1) + "%";
+
+          const trendOcupacion = document.getElementById("trendOcupacion");
+          if (data.ocupacion_promedio >= 80) {
+            trendOcupacion.className = "text-success";
+            trendOcupacion.innerHTML = `<i class="fas fa-arrow-up me-1"></i>Óptima (${
+              data.trend_ocupacion > 0 ? "+" : ""
+            }${data.trend_ocupacion}%)`;
+          } else {
+            trendOcupacion.className = "text-warning";
+            trendOcupacion.innerHTML = `<i class="fas fa-chart-line me-1"></i>Por mejorar`;
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("Error cargando métricas principales:", error);
+        showNotification(
+          "Error al cargar las métricas principales. Mostrando datos de respaldo.",
+          "error"
+        );
+        // No mostrar datos de ejemplo, dejar los valores en -- para indicar error
+      });
+  }
+
+  function cargarResumenDetallado() {
+    const desde = document.getElementById("fechaDesde").value;
+    const hasta = document.getElementById("fechaHasta").value;
+
+    console.log("Cargando resumen detallado...");
+
+    // Usar la ruta correcta del API
+    fetch(`/api/reportes/metricas-detalladas?desde=${desde}&hasta=${hasta}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Datos de resumen detallado:", data);
+        const container = document.getElementById("metricasDetalladas");
+        let html = "";
+
+        // Renderizar métricas detalladas
+        if (data.metricas && data.metricas.length > 0) {
+          data.metricas.forEach((metrica) => {
+            html += `
+              <div class="metric-detail-item">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="small text-muted-dark">${metrica.nombre}</span>
+                  <span class="fw-bold">${metrica.valor}</span>
+                </div>
+                <div class="progress" style="height: 4px; background-color: var(--border-color);">
+                  <div class="progress-bar ${getProgressBarColor(
+                    metrica.porcentaje
+                  )}" 
+                       style="width: ${Math.min(
+                         metrica.porcentaje,
+                         100
+                       )}%"></div>
+                </div>
+              </div>
+            `;
+          });
+        } else {
+          html = `
+            <div class="text-center py-4">
+              <i class="fas fa-chart-bar fa-2x text-muted-dark mb-2"></i>
+              <p class="text-muted-dark small">No hay datos disponibles</p>
+            </div>
+          `;
+        }
+
+        container.innerHTML = html;
+      })
+      .catch((error) => {
+        console.error("Error cargando resumen detallado:", error);
+        showNotification("Error al cargar el resumen detallado", "error");
+        document.getElementById("metricasDetalladas").innerHTML = `
+          <div class="text-center py-4">
+            <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+            <p class="text-muted-dark small">Error al cargar datos</p>
+          </div>
+        `;
+      });
+  }
+
+  function getProgressBarColor(porcentaje) {
+    if (porcentaje >= 80) return "bg-success";
+    if (porcentaje >= 60) return "bg-info";
+    if (porcentaje >= 40) return "bg-warning";
+    return "bg-danger";
+  }
+
+  function cargarGrafica() {
+    const desde = document.getElementById("fechaDesde").value;
+    const hasta = document.getElementById("fechaHasta").value;
+
+    console.log(`Cargando gráfica de tipo: ${currentChartType}`);
+
+    let url;
+    switch (currentChartType) {
+      case "adherencia":
+        // Usar la ruta plural correcta
+        url = `/api/reportes/adherencia?desde=${desde}&hasta=${hasta}`;
+        break;
+      case "noshow":
+        url = `/api/reporte/noshow?desde=${desde}&hasta=${hasta}&por_profesional=1`;
+        break;
+      case "capacidad":
+        url = `/api/reporte/capacidad?dia_semana=${new Date().getDay() + 1}`;
+        break;
+      default:
+        url = `/api/reportes/adherencia?desde=${desde}&hasta=${hasta}`;
+    }
+
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Datos de gráfica recibidos:", data);
+
+        if (data.error) {
+          console.error("Error en datos:", data.error);
+          showNotification("No hay datos disponibles para mostrar", "error");
+          mostrarGraficaVacia();
+          return;
+        }
+
+        renderizarGrafica(data);
+      })
+      .catch((error) => {
+        console.error("Error cargando gráfica:", error);
+        showNotification("Error al cargar la gráfica", "error");
+        mostrarGraficaVacia();
+      });
+  }
+
+  function cargarInsights() {
+    const desde = document.getElementById("fechaDesde").value;
+    const hasta = document.getElementById("fechaHasta").value;
+
+    console.log("Cargando insights...");
+
+    // Usar la ruta correcta del API
+    fetch(`/api/reportes/insights?desde=${desde}&hasta=${hasta}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Datos de insights:", data);
+
+        // Actualizar insight de mejor desempeño
+        if (data.mejor_desempeno) {
+          document.getElementById("mejorDesempeno").textContent =
+            data.mejor_desempeno.descripcion;
+          document.getElementById(
+            "trendMejor"
+          ).innerHTML = `<i class="fas fa-arrow-up me-1"></i>${data.mejor_desempeno.trend}`;
+        }
+
+        // Actualizar área de mejora
+        if (data.area_mejora) {
+          document.getElementById("areaMejora").textContent =
+            data.area_mejora.descripcion;
+          document.getElementById(
+            "trendMejora"
+          ).innerHTML = `<i class="fas fa-lightbulb me-1"></i>${data.area_mejora.recomendacion}`;
+        }
+      })
+      .catch((error) => {
+        console.error("Error cargando insights:", error);
+        // Mostrar mensaje genérico si falla
+        document.getElementById("mejorDesempeno").textContent =
+          "Análisis en progreso...";
+        document.getElementById("areaMejora").textContent =
+          "Recopilando datos...";
+      });
+  }
+
+  function renderizarGrafica(data) {
+    let opciones;
+
+    switch (currentChartType) {
+      case "adherencia":
+        opciones = {
+          chart: {
+            type: "column",
+            backgroundColor: "transparent",
+            style: {
+              fontFamily: "inherit",
+            },
+          },
+          title: { text: "" },
+          xAxis: {
+            categories: data.categorias || [],
+            labels: {
+              rotation: -45,
+              style: {
+                fontSize: "10px",
+                color: "var(--text-primary)",
+              },
+            },
+          },
+          yAxis: {
+            title: {
+              text: "Tasa de Adherencia (%)",
+              style: {
+                color: "var(--text-primary)",
+              },
+            },
+            max: 100,
+            labels: {
+              style: {
+                color: "var(--text-primary)",
+              },
+            },
+          },
+          plotOptions: {
+            column: {
+              colorByPoint: true,
+              borderRadius: 3,
+              dataLabels: {
+                enabled: true,
+                format: "{y}%",
+              },
+            },
+          },
+          colors: [
+            "#007bff",
+            "#28a745",
+            "#ffc107",
+            "#dc3545",
+            "#6c757d",
+            "#17a2b8",
+            "#6610f2",
+          ],
+          series: data.series || [],
+          legend: {
+            enabled: false,
+          },
+          credits: {
+            enabled: false,
+          },
+          tooltip: {
+            valueSuffix: "%",
+          },
+        };
+        break;
+
+      case "noshow":
+        opciones = {
+          chart: {
+            type: "column",
+            backgroundColor: "transparent",
+            style: {
+              fontFamily: "inherit",
+            },
+          },
+          title: { text: "" },
+          xAxis: {
+            categories: data.categorias || [],
+            labels: {
+              rotation: -45,
+              style: {
+                fontSize: "10px",
+                color: "var(--text-primary)",
+              },
+            },
+          },
+          yAxis: {
+            title: {
+              text: "Cantidad",
+              style: {
+                color: "var(--text-primary)",
+              },
+            },
+            labels: {
+              style: {
+                color: "var(--text-primary)",
+              },
+            },
+          },
+          plotOptions: {
+            column: {
+              stacking: "normal",
+              borderRadius: 3,
+              dataLabels: {
+                enabled: true,
+              },
+            },
+          },
+          series: data.series || [],
+          credits: {
+            enabled: false,
+          },
+          legend: {
+            itemStyle: {
+              color: "var(--text-primary)",
+            },
+          },
+        };
+        break;
+
+      case "capacidad":
+        opciones = {
+          chart: {
+            type: "heatmap",
+            backgroundColor: "transparent",
+            style: {
+              fontFamily: "inherit",
+            },
+          },
+          title: { text: "" },
+          xAxis: {
+            categories: data.salas || [],
+            title: {
+              text: "Salas",
+              style: {
+                color: "var(--text-primary)",
+              },
+            },
+            labels: {
+              style: {
+                color: "var(--text-primary)",
+              },
+            },
+          },
+          yAxis: {
+            categories: data.franjas || [],
+            title: {
+              text: "Franjas Horarias",
+              style: {
+                color: "var(--text-primary)",
+              },
+            },
+            labels: {
+              style: {
+                color: "var(--text-primary)",
+              },
+            },
+          },
+          colorAxis: {
+            min: 0,
+            max: 100,
+            minColor: "#FFFFFF",
+            maxColor: "#007BFF",
+          },
+          legend: {
+            align: "right",
+            layout: "vertical",
+            margin: 0,
+            verticalAlign: "top",
+            y: 25,
+            symbolHeight: 280,
+          },
+          series: [
+            {
+              name: "Ocupación (%)",
+              borderWidth: 1,
+              data: data.data || [],
+              dataLabels: {
+                enabled: true,
+                color: "#000000",
+                formatter: function () {
+                  return this.point.value > 0
+                    ? this.point.value.toFixed(1) + "%"
+                    : "";
+                },
+              },
+            },
+          ],
+          credits: {
+            enabled: false,
+          },
+          tooltip: {
+            formatter: function () {
+              return (
+                "<b>" +
+                this.series.xAxis.categories[this.point.x] +
+                "</b><br/>" +
+                this.series.yAxis.categories[this.point.y] +
+                ": " +
+                this.point.value.toFixed(1) +
+                "%"
+              );
+            },
+          },
+        };
+        break;
+    }
+
+    if (chart) {
+      chart.destroy();
+    }
+
+    chart = Highcharts.chart("chartContainer", opciones);
+  }
+
+  function mostrarGraficaVacia() {
+    const opciones = {
+      chart: {
+        type: "column",
+        backgroundColor: "transparent",
+        style: {
+          fontFamily: "inherit",
+        },
+      },
+      title: {
+        text: "No hay datos disponibles",
+        style: {
+          color: "var(--text-secondary)",
+        },
+      },
+      xAxis: {
+        categories: [],
+      },
+      yAxis: {
+        title: {
+          text: "",
+        },
+      },
+      series: [],
+      credits: {
+        enabled: false,
+      },
+    };
+
+    if (chart) {
+      chart.destroy();
+    }
+
+    chart = Highcharts.chart("chartContainer", opciones);
+  }
+
+  function resetFiltros() {
+    const primerDiaMes = new Date();
+    primerDiaMes.setDate(1);
+
+    document.getElementById("fechaDesde").value = primerDiaMes
+      .toISOString()
+      .split("T")[0];
+    document.getElementById("fechaHasta").value = new Date()
+      .toISOString()
+      .split("T")[0];
+
+    cargarTodasLasMetricas();
+    cargarGrafica();
+
+    showNotification("Filtros restablecidos", "success");
+  }
+
+  function exportarReporte() {
+    if (!chart) {
+      showNotification("No hay datos para exportar", "error");
+      return;
+    }
+
+    try {
+      // Usar la funcionalidad de exportación de Highcharts
+      chart.exportChart({
+        type: "application/pdf",
+        filename: `reporte-${currentChartType}-${
+          new Date().toISOString().split("T")[0]
+        }`,
+      });
+
+      showNotification("Reporte exportado exitosamente", "success");
+    } catch (error) {
+      console.error("Error al exportar:", error);
+
+      // Fallback: exportar como imagen
+      try {
+        chart.exportChart({
+          type: "image/png",
+          filename: `reporte-${currentChartType}-${
+            new Date().toISOString().split("T")[0]
+          }`,
+        });
+        showNotification("Reporte exportado como imagen", "success");
+      } catch (e) {
+        showNotification("Error al exportar el reporte", "error");
+      }
+    }
+  }
+</script>
+
+<style>
+  /* === ESTILOS ESPECÍFICOS PARA REPORTES === */
+
+  .metric-card {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+    border-color: var(--primary-color);
+  }
+
+  .metric-icon {
+    opacity: 0.8;
+  }
+
+  .metric-trend {
+    font-size: 0.75rem;
+    opacity: 0.9;
+  }
+
+  /* Estilos para detalles de métricas */
+  .metric-detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .metric-detail-item {
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .metric-detail-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  /* Estilos para cards de insights */
+  .insight-card {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .insight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .insight-icon {
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: rgba(var(--primary-rgb), 0.1);
+  }
+
+  /* Estilos para selectores de reporte */
+  #reportSelector .btn-modern {
+    border-radius: 20px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+  }
+
+  #reportSelector .btn-modern.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+  }
+
+  /* === ESTILOS BASE HEREDADOS === */
+
+  /* Header del Dashboard */
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-modern.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  /* Cards Oscuras */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .card-header-dark {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .card-title-dark {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .card-body-dark {
+    padding: 20px;
+  }
+
+  /* Form Controls Oscuros */
+  .form-control-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: var(--card-bg);
+  }
+
+  .form-control-dark::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .input-group-text.bg-dark {
+    background: var(--sidebar-hover) !important;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  .text-muted-dark {
+    color: var(--text-secondary) !important;
+  }
+
+  /* Estilos para las notificaciones personalizadas */
+  #custom-alerts-container {
+    max-width: 400px !important;
+  }
+
+  .custom-alert {
+    max-width: 350px;
+    width: 100% !important;
+    animation: slideInRight 0.3s ease-out;
+    margin-bottom: 0.5rem;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .custom-alert.fade:not(.show) {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Spinner de carga */
+  .spinner-border {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  /* Ajustes responsive */
+  @media (max-width: 768px) {
+    .metric-card .card-body-dark {
+      padding: 1rem;
+    }
+
+    #reportSelector {
+      justify-content: center;
+    }
+
+    #reportSelector .btn-modern {
+      flex: 1;
+      min-width: 120px;
+      margin-bottom: 0.5rem;
+    }
+
+    #chartContainer {
+      height: 300px !important;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .row.g-3 {
+      --bs-gutter-x: 0.5rem;
+      --bs-gutter-y: 0.5rem;
+    }
+
+    .metric-card h4 {
+      font-size: 1.25rem;
+    }
+
+    .metric-icon i {
+      font-size: 1.5rem !important;
+    }
+
+    .page-title-wrapper {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 24px;
+    }
+
+    #chartContainer {
+      height: 250px !important;
+    }
+  }
+
+  /* Grid más denso */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+
+  .row.g-4 {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+  }
+
+  /* Animación de fade-in */
+  .fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+{% endblock %}

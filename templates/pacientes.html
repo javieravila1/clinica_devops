@@ -1,0 +1,1630 @@
+{% extends "base.html" %} {% block title %}Gestión de Pacientes{% endblock %} {%
+block content %}
+<!-- Contenedor para mensajes personalizados -->
+<div
+  id="custom-alerts-container"
+  class="position-fixed top-0 end-0 p-3"
+  style="z-index: 9999; max-width: 400px"
+></div>
+
+<!-- Modal de confirmación para cambiar estado -->
+<div
+  class="modal fade"
+  id="modalConfirmacionEstado"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar cambio de estado</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center">
+          <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+          <p id="confirmacionMensaje" class="mb-0">
+            ¿Está seguro de realizar esta acción?
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button
+          type="button"
+          class="btn-modern btn-outline"
+          data-bs-dismiss="modal"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-modern btn-primary"
+          id="btnConfirmarAccion"
+        >
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-users title-icon"></i>
+    <h2 class="page-title mb-0">Gestión de Pacientes</h2>
+  </div>
+  {% if 'admin' in session.user_roles or 'recepcion' in session.user_roles %}
+  <button
+    class="btn-modern btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#modalPaciente"
+  >
+    <i class="fas fa-plus me-1"></i>Nuevo Paciente
+  </button>
+  {% endif %}
+</div>
+
+<!-- Filtros y búsqueda compactos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark"
+            ><i class="fas fa-search"></i
+          ></span>
+          <input
+            type="text"
+            class="form-control-dark form-control-sm"
+            id="searchInput"
+            placeholder="Buscar pacientes..."
+          />
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-2 justify-content-end">
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterEstado"
+            style="max-width: 150px"
+          >
+            <option value="todos">Todos</option>
+            <option value="activo">Activos</option>
+            <option value="suspendido">Suspendidos</option>
+            <option value="inactivo">Inactivos</option>
+          </select>
+          <select
+            class="form-select-dark form-select-sm"
+            id="itemsPerPage"
+            style="max-width: 120px"
+          >
+            <option value="8">8 por página</option>
+            <option value="12" selected>12 por página</option>
+            <option value="16">16 por página</option>
+            <option value="20">20 por página</option>
+          </select>
+          <button
+            class="btn-modern btn-outline btn-sm"
+            id="btnResetFilters"
+            title="Restablecer filtros"
+          >
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de Cards Compactas -->
+<div class="row g-3" id="cardsContainer">
+  {% for paciente in pacientes %}
+  <div
+    class="col-xxl-3 col-xl-4 col-lg-4 col-md-6 col-sm-6 fade-in paciente-card"
+    data-estado="{{ paciente.estado_nombre }}"
+    data-nombre="{{ paciente.nombre }} {{ paciente.apellido }}"
+    data-paciente-id="{{ paciente.paciente_id }}"
+  >
+    <div class="card-dark h-100 paciente-card-modern">
+      <div class="card-body-dark p-3">
+        <!-- Header compacto -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center" style="min-width: 0; flex: 1">
+            <div class="avatar-modern-sm me-2 flex-shrink-0">
+              {{ paciente.nombre[0] }}{{ paciente.apellido[0] }}
+            </div>
+            <div style="min-width: 0; flex: 1">
+              <h6 class="card-title-dark mb-0 text-truncate">
+                {{ paciente.nombre }} {{ paciente.apellido }}
+              </h6>
+              <small class="text-muted-dark"
+                >ID: #{{ paciente.paciente_id }}</small
+              >
+            </div>
+          </div>
+          <span
+            class="badge-modern badge-{{ 'success' if paciente.estado_nombre == 'activo' else 'warning' if paciente.estado_nombre == 'suspendido' else 'secondary' }} flex-shrink-0"
+          >
+            {{ paciente.estado_nombre|title }}
+          </span>
+        </div>
+
+        <!-- Información mínima del paciente -->
+        <div class="paciente-info-modern mb-2">
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-id-card me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark">{{ paciente.identificacion }}</small>
+          </div>
+          {% if paciente.telefono %}
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-phone me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark">{{ paciente.telefono }}</small>
+          </div>
+          {% endif %} {% if paciente.email %}
+          <div class="info-item-modern">
+            <i
+              class="fas fa-envelope me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark text-truncate d-block"
+              >{{ paciente.email }}</small
+            >
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Acciones compactas -->
+        <div class="d-flex justify-content-between pt-2 border-top border-dark">
+          <button
+            class="btn-modern btn-outline btn-xs btn-ver"
+            data-paciente-id="{{ paciente.paciente_id }}"
+            title="Ver detalles"
+          >
+            <i class="fas fa-eye"></i>
+          </button>
+          {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles %}
+          <div class="btn-group btn-group-sm">
+            <button
+              class="btn-modern btn-outline btn-xs btn-editar"
+              data-paciente-id="{{ paciente.paciente_id }}"
+              title="Editar"
+            >
+              <i class="fas fa-edit"></i>
+            </button>
+            <button
+              class="btn-modern btn-outline btn-xs btn-cambiar-estado"
+              data-paciente-id="{{ paciente.paciente_id }}"
+              data-estado-actual="{{ paciente.estado_nombre }}"
+              title="{{ 'Desactivar' if paciente.estado_nombre == 'activo' else 'Activar' }}"
+            >
+              <i
+                class="fas fa-{{ 'times' if paciente.estado_nombre == 'activo' else 'check' }}"
+              ></i>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card-dark text-center py-4">
+      <div class="card-body-dark">
+        <div class="empty-state-dark">
+          <i class="fas fa-users fa-2x mb-3"></i>
+          <h6>No hay pacientes registrados</h6>
+          <p class="mb-2">Comience agregando un nuevo paciente.</p>
+          {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles %}
+          <button
+            class="btn-modern btn-primary mt-1"
+            data-bs-toggle="modal"
+            data-bs-target="#modalPaciente"
+          >
+            <i class="fas fa-plus me-1"></i>Agregar Primer Paciente
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Contador de pacientes y paginación -->
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <div class="text-muted-dark">
+    Mostrando
+    <span id="contadorPacientes">0</span>
+    de <span id="totalPacientes">{{ pacientes|length }}</span> paciente(s)
+  </div>
+
+  <!-- Paginación del lado del cliente -->
+  <nav aria-label="Paginación de pacientes" id="paginationContainer">
+    <ul class="pagination pagination-sm mb-0" id="paginationControls">
+      <!-- Los controles de paginación se generarán dinámicamente con JavaScript -->
+    </ul>
+  </nav>
+</div>
+
+<!-- Modal para nuevo paciente -->
+<div class="modal fade" id="modalPaciente" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user-plus me-2"></i>Nuevo Paciente
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form
+        method="POST"
+        action="{{ url_for('pacientes.crear_paciente') }}"
+        id="formPaciente"
+      >
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Identificación *</label>
+                <input
+                  type="text"
+                  class="form-control-dark"
+                  name="identificacion"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Fecha Nacimiento</label>
+                <input
+                  type="date"
+                  class="form-control-dark"
+                  name="fecha_nacimiento"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Nombre *</label>
+                <input
+                  type="text"
+                  class="form-control-dark"
+                  name="nombre"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Apellido *</label>
+                <input
+                  type="text"
+                  class="form-control-dark"
+                  name="apellido"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                <input type="tel" class="form-control-dark" name="telefono" />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control-dark" name="email" />
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Dirección</label>
+            <textarea
+              class="form-control-dark"
+              name="direccion"
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Guardar Paciente
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles -->
+<div class="modal fade" id="modalVerPaciente" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user me-2"></i>Detalles del Paciente
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body p-0" id="detallesPaciente">
+        <!-- Los detalles se cargarán aquí via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para editar paciente -->
+<div class="modal fade" id="modalEditarPaciente" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-edit me-2"></i>Editar Paciente
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form method="POST" action="" id="formEditarPaciente">
+        <div class="modal-body" id="formEditarPacienteBody">
+          <!-- El formulario se cargará aquí via AJAX -->
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Actualizar Paciente
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // Variables globales para manejar la paginación
+  let currentPage = 1;
+  let itemsPerPage = 12;
+  let filteredPacientes = [];
+
+  // Variables globales para manejar la confirmación
+  let pacienteEstadoActual = null;
+  let estadoActualPaciente = null;
+  let botonEstadoActual = null;
+
+  // Función mejorada para mostrar notificaciones personalizadas
+  function showNotification(message, type) {
+    const container = document.getElementById("custom-alerts-container");
+    if (!container) {
+      console.error("No se encontró el contenedor de alertas");
+      return;
+    }
+
+    // Crear elemento de alerta
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${
+      type === "error" ? "danger" : "success"
+    } alert-dismissible fade show custom-alert mb-2`;
+    alertDiv.style.maxWidth = "350px";
+    alertDiv.style.width = "100%";
+    alertDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    alertDiv.style.border = "none";
+    alertDiv.style.borderRadius = "8px";
+    alertDiv.style.fontSize = "0.875rem";
+
+    // Icono según el tipo
+    const icon = type === "error" ? "exclamation-triangle" : "check-circle";
+    const title = type === "error" ? "Error" : "Éxito";
+
+    alertDiv.innerHTML = `
+      <div class="d-flex align-items-start">
+        <i class="fas fa-${icon} mt-1 me-2 ${
+      type === "error" ? "text-danger" : "text-success"
+    }" style="flex-shrink: 0;"></i>
+        <div class="flex-grow-1" style="min-width: 0;">
+          <strong class="d-block mb-1">${title}</strong>
+          <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+      </div>
+    `;
+
+    // Agregar al contenedor (al inicio para que las nuevas aparezcan arriba)
+    container.insertBefore(alertDiv, container.firstChild);
+
+    // Auto-eliminar después de 5 segundos
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+      }
+    }, 5000);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Inicializar la paginación
+    initPagination();
+
+    // Manejar el botón de ver detalles
+    document.querySelectorAll(".btn-ver").forEach((button) => {
+      button.addEventListener("click", function () {
+        const pacienteId = this.getAttribute("data-paciente-id");
+        cargarDetallesPaciente(pacienteId);
+      });
+    });
+
+    // Manejar el botón de editar
+    document.querySelectorAll(".btn-editar").forEach((button) => {
+      button.addEventListener("click", function () {
+        const pacienteId = this.getAttribute("data-paciente-id");
+        cargarFormularioEdicion(pacienteId);
+      });
+    });
+
+    // Manejar el botón de cambiar estado
+    document.querySelectorAll(".btn-cambiar-estado").forEach((button) => {
+      button.addEventListener("click", function () {
+        const pacienteId = this.getAttribute("data-paciente-id");
+        const estadoActual = this.getAttribute("data-estado-actual");
+
+        // Guardar los datos para usar en la confirmación
+        pacienteEstadoActual = pacienteId;
+        estadoActualPaciente = estadoActual;
+        botonEstadoActual = this;
+
+        // Mostrar modal de confirmación personalizado
+        mostrarModalConfirmacion(estadoActual);
+      });
+    });
+
+    // Configurar el botón de confirmar en el modal
+    document
+      .getElementById("btnConfirmarAccion")
+      .addEventListener("click", function () {
+        if (pacienteEstadoActual && estadoActualPaciente && botonEstadoActual) {
+          cambiarEstadoPaciente(
+            pacienteEstadoActual,
+            estadoActualPaciente,
+            botonEstadoActual
+          );
+          // Cerrar el modal
+          const modal = bootstrap.Modal.getInstance(
+            document.getElementById("modalConfirmacionEstado")
+          );
+          modal.hide();
+        }
+      });
+
+    // Filtros y búsqueda
+    const searchInput = document.getElementById("searchInput");
+    const filterEstado = document.getElementById("filterEstado");
+    const itemsPerPageSelect = document.getElementById("itemsPerPage");
+    const btnResetFilters = document.getElementById("btnResetFilters");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        filtrarPacientes();
+        updatePagination();
+      });
+    }
+
+    if (filterEstado) {
+      filterEstado.addEventListener("change", function () {
+        filtrarPacientes();
+        updatePagination();
+      });
+    }
+
+    if (itemsPerPageSelect) {
+      itemsPerPageSelect.addEventListener("change", function () {
+        itemsPerPage = parseInt(this.value);
+        currentPage = 1;
+        updatePagination();
+      });
+    }
+
+    if (btnResetFilters) {
+      btnResetFilters.addEventListener("click", resetearFiltros);
+    }
+
+    // Actualizar contador inicial
+    updateCounter();
+  });
+
+  // Función para inicializar la paginación
+  function initPagination() {
+    // Obtener todos los pacientes
+    const allPacientes = Array.from(
+      document.querySelectorAll(".paciente-card")
+    );
+
+    // Inicializar la lista filtrada con todos los pacientes
+    filteredPacientes = allPacientes;
+
+    // Actualizar la paginación
+    updatePagination();
+  }
+
+  // Función para actualizar la paginación
+  function updatePagination() {
+    const totalPacientes = filteredPacientes.length;
+    const totalPages = Math.ceil(totalPacientes / itemsPerPage);
+
+    // Asegurarse de que la página actual sea válida
+    if (currentPage > totalPages && totalPages > 0) {
+      currentPage = totalPages;
+    } else if (totalPages === 0) {
+      currentPage = 1;
+    }
+
+    // Ocultar todos los pacientes primero
+    document.querySelectorAll(".paciente-card").forEach((card) => {
+      card.style.display = "none";
+    });
+
+    // Mostrar solo los pacientes de la página actual
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pacientesToShow = filteredPacientes.slice(startIndex, endIndex);
+
+    pacientesToShow.forEach((card) => {
+      card.style.display = "block";
+    });
+
+    // Actualizar contador
+    updateCounter();
+
+    // Generar controles de paginación
+    generatePaginationControls(totalPages);
+  }
+
+  // Función para generar los controles de paginación
+  function generatePaginationControls(totalPages) {
+    const paginationContainer = document.getElementById("paginationControls");
+
+    if (totalPages <= 1) {
+      paginationContainer.innerHTML = "";
+      document.getElementById("paginationContainer").style.display = "none";
+      return;
+    }
+
+    document.getElementById("paginationContainer").style.display = "block";
+
+    let paginationHTML = "";
+
+    // Botón anterior
+    paginationHTML += `
+      <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+        <a class="page-link" href="#" onclick="changePage(${
+          currentPage - 1
+        }); return false;">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+    `;
+
+    // Páginas
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    // Ajustar si estamos cerca del final
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    // Primera página y puntos suspensivos si es necesario
+    if (startPage > 1) {
+      paginationHTML += `
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="changePage(1); return false;">1</a>
+        </li>
+      `;
+      if (startPage > 2) {
+        paginationHTML += `
+          <li class="page-item disabled">
+            <span class="page-link">...</span>
+          </li>
+        `;
+      }
+    }
+
+    // Páginas visibles
+    for (let i = startPage; i <= endPage; i++) {
+      paginationHTML += `
+        <li class="page-item ${i === currentPage ? "active" : ""}">
+          <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+        </li>
+      `;
+    }
+
+    // Última página y puntos suspensivos si es necesario
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        paginationHTML += `
+          <li class="page-item disabled">
+            <span class="page-link">...</span>
+          </li>
+        `;
+      }
+      paginationHTML += `
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="changePage(${totalPages}); return false;">${totalPages}</a>
+        </li>
+      `;
+    }
+
+    // Botón siguiente
+    paginationHTML += `
+      <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+        <a class="page-link" href="#" onclick="changePage(${
+          currentPage + 1
+        }); return false;">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    `;
+
+    paginationContainer.innerHTML = paginationHTML;
+  }
+
+  // Función para cambiar de página
+  function changePage(page) {
+    currentPage = page;
+    updatePagination();
+
+    // Scroll suave hacia arriba
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  // Función para actualizar el contador
+  function updateCounter() {
+    const totalPacientes = filteredPacientes.length;
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, totalPacientes);
+
+    document.getElementById("contadorPacientes").textContent =
+      totalPacientes > 0 ? `${startIndex}-${endIndex}` : "0";
+    document.getElementById("totalPacientes").textContent = totalPacientes;
+  }
+
+  function mostrarModalConfirmacion(estadoActual) {
+    const accion = estadoActual === "activo" ? "desactivar" : "activar";
+    const mensaje = `¿Está seguro de ${accion} este paciente?`;
+
+    document.getElementById("confirmacionMensaje").textContent = mensaje;
+
+    const modal = new bootstrap.Modal(
+      document.getElementById("modalConfirmacionEstado")
+    );
+    modal.show();
+  }
+
+  function cambiarEstadoPaciente(pacienteId, estadoActual, button) {
+    const nuevoEstado = estadoActual === "activo" ? "inactivo" : "activo";
+
+    // Mostrar indicador de carga
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+
+    fetch(`/pacientes/cambiar-estado/${pacienteId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ nuevo_estado: nuevoEstado }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showNotification(data.message, "success");
+          // Recargar después de 1.5 segundos
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
+        } else {
+          throw new Error(data.error || "Error desconocido");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification(
+          "Error al cambiar el estado del paciente: " + error.message,
+          "error"
+        );
+        // Restaurar botón
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+      });
+  }
+
+  function filtrarPacientes() {
+    const searchTerm = document
+      .getElementById("searchInput")
+      .value.toLowerCase();
+    const estadoFiltro = document.getElementById("filterEstado").value;
+
+    // Obtener todos los pacientes
+    const allPacientes = Array.from(
+      document.querySelectorAll(".paciente-card")
+    );
+
+    // Filtrar pacientes
+    filteredPacientes = allPacientes.filter((card) => {
+      const nombre = card.getAttribute("data-nombre").toLowerCase();
+      const estado = card.getAttribute("data-estado");
+
+      const coincideNombre = nombre.includes(searchTerm);
+      const coincideEstado =
+        estadoFiltro === "todos" || estado === estadoFiltro;
+
+      return coincideNombre && coincideEstado;
+    });
+
+    // Reiniciar a la primera página después de filtrar
+    currentPage = 1;
+  }
+
+  function resetearFiltros() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("filterEstado").value = "todos";
+    document.getElementById("itemsPerPage").value = "12";
+    itemsPerPage = 12;
+    currentPage = 1;
+    filtrarPacientes();
+    updatePagination();
+  }
+
+  function cargarDetallesPaciente(pacienteId) {
+    fetch(`/api/pacientes/${pacienteId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((paciente) => {
+        const modalBody = document.getElementById("detallesPaciente");
+        modalBody.innerHTML = `
+          <div class="paciente-detalles">
+            <!-- Header con información principal -->
+            <div class="paciente-header p-4" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white;">
+              <div class="d-flex align-items-center">
+                <div class="avatar-modern-md me-3">
+                  ${paciente.nombre[0]}${paciente.apellido[0]}
+                </div>
+                <div>
+                  <h4 class="mb-1">${paciente.nombre} ${paciente.apellido}</h4>
+                  <p class="mb-0 opacity-75">ID: #${paciente.paciente_id} | ${
+          paciente.identificacion
+        }</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Cuerpo de detalles -->
+            <div class="p-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-user-circle me-2"></i>Información Personal
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Fecha de Nacimiento:</span>
+                      <span class="detalle-valor">${
+                        paciente.fecha_nacimiento || "No especificada"
+                      }</span>
+                    </div>
+                    ${
+                      paciente.fecha_nacimiento
+                        ? `
+                    <div class="detalle-item">
+                      <span class="detalle-label">Edad:</span>
+                      <span class="detalle-valor">${calcularEdad(
+                        paciente.fecha_nacimiento
+                      )} años</span>
+                    </div>
+                    `
+                        : ""
+                    }
+                    <div class="detalle-item">
+                      <span class="detalle-label">Estado:</span>
+                      <span class="detalle-valor">
+                        <span class="badge-modern badge-${
+                          paciente.estado_nombre === "activo"
+                            ? "success"
+                            : paciente.estado_nombre === "suspendido"
+                            ? "warning"
+                            : "secondary"
+                        }">
+                          ${paciente.estado_nombre}
+                        </span>
+                      </span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Fecha de Alta:</span>
+                      <span class="detalle-valor">${
+                        paciente.fecha_alta
+                          ? new Date(paciente.fecha_alta).toLocaleDateString()
+                          : "N/A"
+                      }</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-address-book me-2"></i>Información de Contacto
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Teléfono:</span>
+                      <span class="detalle-valor">
+                        ${
+                          paciente.telefono
+                            ? `
+                          <a href="tel:${paciente.telefono}" class="text-decoration-none">
+                            <i class="fas fa-phone me-1"></i>${paciente.telefono}
+                          </a>
+                        `
+                            : "N/A"
+                        }
+                      </span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Email:</span>
+                      <span class="detalle-valor">
+                        ${
+                          paciente.email
+                            ? `
+                          <a href="mailto:${paciente.email}" class="text-decoration-none">
+                            <i class="fas fa-envelope me-1"></i>${paciente.email}
+                          </a>
+                        `
+                            : "N/A"
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              ${paciente.username || paciente.passhash ? `
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3">
+                    <i class="fas fa-lock me-2"></i>Credenciales de Acceso
+                  </h6>
+                  ${paciente.username ? `
+                  <div class="detalle-item">
+                    <span class="detalle-label">Usuario:</span>
+                    <span class="detalle-valor">
+                      <i class="fas fa-user me-1 text-primary"></i>${paciente.username}
+                    </span>
+                  </div>
+                  ` : ''}
+                  ${paciente.passhash ? `
+                  <div class="detalle-item">
+                    <span class="detalle-label">Password Hash:</span>
+                    <span class="detalle-valor" style="font-family: monospace; font-size: 0.75rem; word-break: break-all;">
+                      <i class="fas fa-key me-1 text-warning"></i>${paciente.passhash}
+                    </span>
+                  </div>
+                  ` : ''}
+                </div>
+                ` : ''}
+              
+              ${
+                paciente.direccion
+                  ? `
+              <div class="detalle-seccion">
+                <h6 class="seccion-titulo mb-3">
+                  <i class="fas fa-map-marker-alt me-2"></i>Dirección
+                </h6>
+                <div class="card-dark">
+                  <div class="card-body-dark py-2">
+                    <p class="mb-0">${paciente.direccion}</p>
+                  </div>
+                </div>
+              </div>
+              `
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+
+        // Mostrar el modal correctamente
+        const modalElement = document.getElementById("modalVerPaciente");
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar los detalles del paciente", "error");
+      });
+  }
+
+  function cargarFormularioEdicion(pacienteId) {
+    fetch(`/api/pacientes/${pacienteId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((paciente) => {
+        const modalBody = document.getElementById("formEditarPacienteBody");
+
+        // Formatear la fecha correctamente para el input type="date"
+        let fechaNacimientoValue = "";
+        if (paciente.fecha_nacimiento) {
+          // Convertir la fecha al formato YYYY-MM-DD que requiere input type="date"
+          const fecha = new Date(paciente.fecha_nacimiento);
+          if (!isNaN(fecha.getTime())) {
+            fechaNacimientoValue = fecha.toISOString().split("T")[0];
+          }
+        }
+
+        modalBody.innerHTML = `
+                <input type="hidden" name="paciente_id" value="${
+                  paciente.paciente_id
+                }">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Identificación *</label>
+                            <input type="text" class="form-control-dark" name="identificacion" value="${
+                              paciente.identificacion
+                            }" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Fecha Nacimiento</label>
+                            <input type="date" class="form-control-dark" name="fecha_nacimiento" value="${fechaNacimientoValue}">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <input type="text" class="form-control-dark" name="nombre" value="${
+                              paciente.nombre
+                            }" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Apellido *</label>
+                            <input type="text" class="form-control-dark" name="apellido" value="${
+                              paciente.apellido
+                            }" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control-dark" name="telefono" value="${
+                              paciente.telefono || ""
+                            }">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control-dark" name="email" value="${
+                              paciente.email || ""
+                            }">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Dirección</label>
+                    <textarea class="form-control-dark" name="direccion" rows="2">${
+                      paciente.direccion || ""
+                    }</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Estado</label>
+                    <select class="form-select-dark" name="estado_id">
+                        <option value="1" ${
+                          paciente.estado_id === 1 ? "selected" : ""
+                        }>Activo</option>
+                        <option value="2" ${
+                          paciente.estado_id === 2 ? "selected" : ""
+                        }>Suspendido</option>
+                        <option value="3" ${
+                          paciente.estado_id === 3 ? "selected" : ""
+                        }>Inactivo</option>
+                    </select>
+                </div>
+            `;
+
+        // Configurar la acción del formulario
+        document.getElementById(
+          "formEditarPaciente"
+        ).action = `/pacientes/editar/${pacienteId}`;
+
+        // Mostrar el modal correctamente
+        const modalElement = document.getElementById("modalEditarPaciente");
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar el formulario de edición", "error");
+      });
+  }
+
+  function calcularEdad(fechaNacimiento) {
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+
+    return edad;
+  }
+
+  // Manejar el envío del formulario de edición
+  document.addEventListener("DOMContentLoaded", function () {
+    const formEditar = document.getElementById("formEditarPaciente");
+    if (formEditar) {
+      formEditar.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+
+        // Mostrar loading
+        submitButton.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+        submitButton.disabled = true;
+
+        fetch(this.action, {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Error en la respuesta del servidor");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              showNotification(data.message, "success");
+              // Cerrar el modal
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalEditarPaciente")
+              );
+              modal.hide();
+              // Recargar la página después de un breve delay
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              throw new Error(data.error || "Error al actualizar el paciente");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showNotification(
+              "Error al actualizar el paciente: " + error.message,
+              "error"
+            );
+            // Restaurar botón
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+          });
+      });
+    }
+  });
+</script>
+
+<style>
+  /* Header del Dashboard */
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-modern.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-modern.btn-xs {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Cards Oscuras */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .card-header-dark {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .card-title-dark {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .card-body-dark {
+    padding: 20px;
+  }
+
+  /* Form Controls Oscuros */
+  .form-control-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: var(--card-bg);
+  }
+
+  .form-control-dark::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .form-select-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-select-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-select-dark option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .input-group-text.bg-dark {
+    background: var(--sidebar-hover) !important;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* Cards de Pacientes Modernas */
+  .paciente-card-modern {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .paciente-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+    border-color: var(--primary-color);
+  }
+
+  .avatar-modern-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    background: linear-gradient(
+      135deg,
+      var(--primary-color),
+      var(--primary-dark)
+    );
+    color: white;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  .avatar-modern-md {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .text-muted-dark {
+    color: var(--text-secondary) !important;
+  }
+
+  .paciente-info-modern .info-item-modern {
+    display: flex;
+    align-items: center;
+  }
+
+  .border-dark {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Badges Modernos */
+  .badge-modern {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-modern.badge-primary {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .badge-modern.badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .badge-modern.badge-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .badge-modern.badge-secondary {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+
+  /* Estado Vacío */
+  .empty-state-dark {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-dark i {
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-dark h6 {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-dark p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  /* Estilos para el modal de detalles */
+  .paciente-detalles .detalle-seccion {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+
+  .paciente-detalles .detalle-seccion:last-child {
+    border-bottom: none;
+  }
+
+  .seccion-titulo {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .detalle-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+  }
+
+  .detalle-item:last-child {
+    border-bottom: none;
+  }
+
+  .detalle-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .detalle-valor {
+    font-weight: 400;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  /* Grid más denso */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+
+  /* Estilos para las notificaciones personalizadas */
+  #custom-alerts-container {
+    max-width: 400px !important;
+  }
+
+  .custom-alert {
+    max-width: 350px;
+    width: 100% !important;
+    animation: slideInRight 0.3s ease-out;
+    margin-bottom: 0.5rem;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .custom-alert.fade:not(.show) {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Estilos para paginación */
+  .page-link {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .page-link:hover {
+    background-color: var(--sidebar-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+
+  .page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+  }
+
+  .page-item.disabled .page-link {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* Estilos específicos para modo oscuro */
+  [data-theme="dark"] .modal-content {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  [data-theme="dark"] .modal-header {
+    border-bottom-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .modal-footer {
+    border-top-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .form-label {
+    color: var(--text-primary);
+  }
+
+  /* Responsive para cards muy compactas */
+  @media (max-width: 576px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 50%;
+    }
+
+    .paciente-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+
+    .detalle-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detalle-valor {
+      text-align: left;
+      margin-top: 0.1rem;
+    }
+
+    #custom-alerts-container {
+      padding: 1rem !important;
+      max-width: 300px !important;
+    }
+
+    .custom-alert {
+      max-width: 280px !important;
+    }
+
+    .page-title-wrapper {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 24px;
+    }
+
+    /* Paginación responsive */
+    .pagination {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .page-item {
+      margin-bottom: 0.25rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+
+    #custom-alerts-container {
+      max-width: 250px !important;
+    }
+
+    .custom-alert {
+      max-width: 230px !important;
+    }
+  }
+</style>
+{% endblock %}

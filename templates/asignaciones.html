@@ -1,0 +1,1791 @@
+{% extends "base.html" %} {% block title %}Asignaciones{% endblock %} {% block
+content %}
+
+<!-- Contenedor para mensajes personalizados -->
+<div
+  id="custom-alerts-container"
+  class="position-fixed top-0 end-0 p-3"
+  style="z-index: 9999; max-width: 400px"
+></div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-bed title-icon"></i>
+    <h2 class="page-title mb-0">Gestión de Asignaciones</h2>
+  </div>
+</div>
+
+<!-- Tabs para diferentes tipos de asignaciones -->
+<ul
+  class="nav nav-tabs nav-tabs-dark mb-4"
+  id="asignacionesTabs"
+  role="tablist"
+>
+  <li class="nav-item" role="presentation">
+    <button
+      class="nav-link active"
+      id="camas-tab"
+      data-bs-toggle="tab"
+      data-bs-target="#camas"
+      type="button"
+    >
+      <i class="fas fa-bed me-2"></i>Asignaciones de Cama
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button
+      class="nav-link"
+      id="personal-tab"
+      data-bs-toggle="tab"
+      data-bs-target="#personal"
+      type="button"
+    >
+      <i class="fas fa-user-nurse me-2"></i>Asignaciones de Personal
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button
+      class="nav-link"
+      id="medicamentos-tab"
+      data-bs-toggle="tab"
+      data-bs-target="#medicamentos"
+      type="button"
+    >
+      <i class="fas fa-pills me-2"></i>Administración de Medicamentos
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="asignacionesTabContent">
+  <!-- TAB: Asignaciones de Cama -->
+  <div class="tab-pane fade show active" id="camas" role="tabpanel">
+    <!-- Filtros y búsqueda -->
+    <div class="card-dark mb-3">
+      <div class="card-body-dark py-3">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-6">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-dark"
+                ><i class="fas fa-search"></i
+              ></span>
+              <input
+                type="text"
+                class="form-control-dark form-control-sm"
+                id="searchCamas"
+                placeholder="Buscar por paciente o habitación..."
+              />
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex gap-2 justify-content-end">
+              <select
+                class="form-select-dark form-select-sm"
+                id="filterEstadoCama"
+                style="max-width: 150px"
+              >
+                <option value="todos">Todos</option>
+                <option value="activo">Activos</option>
+                <option value="egresado">Egresados</option>
+              </select>
+              {% if 'admin' in session.user_roles or 'recepcion' in
+              session.user_roles %}
+              <button
+                class="btn-modern btn-primary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#modalAsignacionCama"
+              >
+                <i class="fas fa-plus me-1"></i>Nueva Asignación
+              </button>
+              {% endif %}
+              <button
+                class="btn-modern btn-outline btn-sm"
+                id="btnResetCamas"
+                title="Restablecer filtros"
+              >
+                <i class="fas fa-redo"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards de Asignaciones de Cama -->
+    <div class="row g-3" id="camasContainer">
+      {% for asig in asignaciones_cama %}
+      <div
+        class="col-xxl-4 col-xl-4 col-lg-6 col-md-6 col-sm-6 fade-in cama-card"
+        data-paciente="{{ asig.paciente_nombre }} {{ asig.paciente_apellido }}"
+        data-habitacion="{{ asig.habitacion_nombre }}"
+        data-estado="{{ asig.estado_nombre }}"
+      >
+        <div class="card-dark h-100 asignacion-card-modern">
+          <div class="card-body-dark p-3">
+            <!-- Header compacto -->
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div
+                class="d-flex align-items-center"
+                style="min-width: 0; flex: 1"
+              >
+                <div
+                  class="avatar-modern-sm me-2"
+                  style="background: linear-gradient(135deg, #667eea, #764ba2)"
+                >
+                  {{ asig.paciente_nombre[0] if asig.paciente_nombre else '?'
+                  }}{{ asig.paciente_apellido[0] if asig.paciente_apellido else
+                  '' }}
+                </div>
+                <div style="min-width: 0; flex: 1">
+                  <div class="card-title-dark mb-0 text-truncate">
+                    {{ asig.paciente_nombre }} {{ asig.paciente_apellido }}
+                  </div>
+                  <small class="text-muted-dark"
+                    >ID: #{{ asig.asignacion_id }}</small
+                  >
+                </div>
+              </div>
+              {% if asig.fecha_egreso %}
+              <span class="badge bg-secondary flex-shrink-0">Egresado</span>
+              {% else %}
+              <span class="badge bg-success flex-shrink-0">Activo</span>
+              {% endif %}
+            </div>
+
+            <!-- Información de la asignación -->
+            <div class="asignacion-info-modern mb-2">
+              <div class="info-item-modern mb-1">
+                <span class="info-label-modern"
+                  ><i class="fas fa-bed me-1"></i>Cama</span
+                >
+                <span class="info-value-modern"
+                  ><span class="badge bg-info"
+                    >{{ asig.numero_cama }}</span
+                  ></span
+                >
+              </div>
+              <div class="info-item-modern mb-1">
+                <span class="info-label-modern"
+                  ><i class="fas fa-door-open me-1"></i>Habitación</span
+                >
+                <span class="info-value-modern"
+                  >{{ asig.habitacion_nombre }}</span
+                >
+              </div>
+              <div class="info-item-modern mb-1">
+                <span class="info-label-modern"
+                  ><i class="fas fa-calendar-check me-1"></i>Ingreso</span
+                >
+                <span class="info-value-modern"
+                  >{{ asig.fecha_ingreso.strftime('%d/%m/%Y %H:%M') }}</span
+                >
+              </div>
+              {% if asig.fecha_egreso %}
+              <div class="info-item-modern mb-1">
+                <span class="info-label-modern"
+                  ><i class="fas fa-calendar-times me-1"></i>Egreso</span
+                >
+                <span class="info-value-modern"
+                  >{{ asig.fecha_egreso.strftime('%d/%m/%Y %H:%M') }}</span
+                >
+              </div>
+              {% endif %}
+              <div class="info-item-modern">
+                <span class="info-label-modern"
+                  ><i class="fas fa-clock me-1"></i>Estancia</span
+                >
+                <span class="info-value-modern">
+                  {% if asig.fecha_egreso %} {{ (asig.fecha_egreso -
+                  asig.fecha_ingreso).days }} días {% else %} {{ (now -
+                  asig.fecha_ingreso).days }} días {% endif %}
+                </span>
+              </div>
+            </div>
+
+            <!-- Acciones compactas -->
+            <div
+              class="d-flex justify-content-between pt-2 border-top border-dark"
+            >
+              <button
+                class="btn-modern btn-xs btn-outline"
+                onclick="verDetalleCama({{ asig.asignacion_id }})"
+                title="Ver detalles"
+              >
+                <i class="fas fa-eye"></i> Detalles
+              </button>
+              {% if not asig.fecha_egreso and ('admin' in session.user_roles or
+              'recepcion' in session.user_roles) %}
+              <button
+                class="btn-modern btn-xs btn-primary"
+                onclick="registrarEgreso({{ asig.asignacion_id }})"
+                title="Registrar egreso"
+              >
+                <i class="fas fa-sign-out-alt"></i> Egreso
+              </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-12">
+        <div class="empty-state-dark">
+          <i class="fas fa-bed fa-3x"></i>
+          <h6>No hay asignaciones de cama registradas</h6>
+          <p>Comience asignando una cama a un paciente.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Contador -->
+    <div class="mt-3 text-end">
+      <small class="text-muted-dark"
+        >Mostrando
+        <span id="contadorCamas">{{ asignaciones_cama|length }}</span>
+        asignación(es)</small
+      >
+    </div>
+  </div>
+
+  <!-- TAB: Asignaciones de Personal -->
+  <div class="tab-pane fade" id="personal" role="tabpanel">
+    <!-- Filtros y búsqueda -->
+    <div class="card-dark mb-3">
+      <div class="card-body-dark py-3">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-6">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-dark"
+                ><i class="fas fa-search"></i
+              ></span>
+              <input
+                type="text"
+                class="form-control-dark form-control-sm"
+                id="searchPersonal"
+                placeholder="Buscar por paciente o personal..."
+              />
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex gap-2 justify-content-end">
+              <select
+                class="form-select-dark form-select-sm"
+                id="filterTipoPersonal"
+                style="max-width: 150px"
+              >
+                <option value="todos">Todos</option>
+                <option value="enfermera">Enfermeras</option>
+                <option value="profesional">Profesionales</option>
+              </select>
+              {% if 'admin' in session.user_roles or 'profesional' in
+              session.user_roles %}
+              <button
+                class="btn-modern btn-primary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#modalAsignacionPersonal"
+              >
+                <i class="fas fa-plus me-1"></i>Nueva Asignación
+              </button>
+              {% endif %}
+              <button
+                class="btn-modern btn-outline btn-sm"
+                id="btnResetPersonal"
+                title="Restablecer filtros"
+              >
+                <i class="fas fa-redo"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards de Asignaciones de Personal -->
+    <div class="row g-3" id="personalContainer">
+      {% for asig in asignaciones_personal %}
+      <div
+        class="col-xxl-4 col-xl-4 col-lg-6 col-md-6 col-sm-6 fade-in personal-card"
+        data-paciente="{{ asig.paciente_nombre }} {{ asig.paciente_apellido }}"
+        data-personal="{{ asig.asignado_nombre }} {{ asig.asignado_apellido }}"
+        data-tipo="{% if asig.enfermera_id %}enfermera{% else %}profesional{% endif %}"
+      >
+        <div class="card-dark h-100 asignacion-card-modern">
+          <div class="card-body-dark p-3">
+            <!-- Header compacto -->
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div
+                class="d-flex align-items-center"
+                style="min-width: 0; flex: 1"
+              >
+                <div
+                  class="avatar-modern-sm me-2"
+                  style="
+                    background: linear-gradient(
+                      135deg,
+                      {% if asig.enfermera_id %}#10b981,
+                      #059669{% else %}#3b82f6,
+                      #1e40af{% endif %}
+                    );
+                  "
+                >
+                  {{ asig.paciente_nombre[0] if asig.paciente_nombre else '?'
+                  }}{{ asig.paciente_apellido[0] if asig.paciente_apellido else
+                  '' }}
+                </div>
+                <div style="min-width: 0; flex: 1">
+                  <div class="card-title-dark mb-0 text-truncate">
+                    {{ asig.paciente_nombre }} {{ asig.paciente_apellido }}
+                  </div>
+                  <small class="text-muted-dark"
+                    >ID: #{{ asig.asignacion_id }}</small
+                  >
+                </div>
+              </div>
+              {% if asig.enfermera_id %}
+              <span class="badge bg-success flex-shrink-0"
+                ><i class="fas fa-user-nurse"></i> Enfermera</span
+              >
+              {% else %}
+              <span class="badge bg-primary flex-shrink-0"
+                ><i class="fas fa-user-md"></i> Profesional</span
+              >
+              {% endif %}
+            </div>
+
+            <!-- Información de la asignación -->
+            <div class="asignacion-info-modern mb-2">
+              <div class="info-item-modern mb-1">
+                <span class="info-label-modern">
+                  <i
+                    class="fas {% if asig.enfermera_id %}fa-user-nurse{% else %}fa-user-md{% endif %} me-1"
+                  ></i
+                  >Asignado
+                </span>
+                <span class="info-value-modern"
+                  >{{ asig.asignado_nombre }} {{ asig.asignado_apellido }}</span
+                >
+              </div>
+              <div class="info-item-modern mb-1">
+                <span class="info-label-modern"
+                  ><i class="fas fa-calendar-check me-1"></i>Asignación</span
+                >
+                <span class="info-value-modern"
+                  >{{ asig.fecha_asignacion.strftime('%d/%m/%Y') if
+                  asig.fecha_asignacion else 'N/A' }}</span
+                >
+              </div>
+              <div class="info-item-modern mb-1">
+                <span class="info-label-modern"
+                  ><i class="fas fa-calendar-times me-1"></i>Fin</span
+                >
+                <span class="info-value-modern"
+                  >{{ asig.fecha_fin.strftime('%d/%m/%Y') if asig.fecha_fin else
+                  'Indefinido' }}</span
+                >
+              </div>
+              <div class="info-item-modern">
+                <span class="info-label-modern"
+                  ><i class="fas fa-info-circle me-1"></i>Estado</span
+                >
+                <span class="info-value-modern"
+                  ><span class="badge-{{ asig.estado_nombre }}"
+                    >{{ asig.estado_nombre | capitalize }}</span
+                  ></span
+                >
+              </div>
+            </div>
+
+            <!-- Observaciones preview -->
+            {% if asig.observaciones %}
+            <div class="observaciones-preview mb-2">
+              <div class="card-dark border-0">
+                <div
+                  class="card-body-dark p-2"
+                  style="
+                    font-size: 0.8rem;
+                    line-height: 1.3;
+                    background: rgba(59, 130, 246, 0.05);
+                    border-radius: 8px;
+                  "
+                >
+                  <i class="fas fa-comment-dots me-1"></i>
+                  {{ asig.observaciones[:50] }}{% if asig.observaciones|length >
+                  50 %}...{% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Acciones compactas -->
+            <div
+              class="d-flex justify-content-between pt-2 border-top border-dark"
+            >
+              <button
+                class="btn-modern btn-xs btn-outline"
+                onclick="verDetallePersonal({{ asig.asignacion_id }})"
+                title="Ver detalles"
+              >
+                <i class="fas fa-eye"></i> Detalles
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-12">
+        <div class="empty-state-dark">
+          <i class="fas fa-user-nurse fa-3x"></i>
+          <h6>No hay asignaciones de personal registradas</h6>
+          <p>Comience asignando personal a un paciente.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Contador -->
+    <div class="mt-3 text-end">
+      <small class="text-muted-dark"
+        >Mostrando
+        <span id="contadorPersonal">{{ asignaciones_personal|length }}</span>
+        asignación(es)</small
+      >
+    </div>
+  </div>
+
+  <!-- TAB: Administración de Medicamentos -->
+  <div class="tab-pane fade" id="medicamentos" role="tabpanel">
+    <div class="card-dark">
+      <div class="card-body-dark">
+        <div class="text-center py-5">
+          <i class="fas fa-pills fa-4x text-muted mb-3"></i>
+          <h5>Administración de Medicamentos</h5>
+          <p class="text-muted">
+            Los registros de administración de medicamentos se cargarán
+            dinámicamente
+          </p>
+          <button class="btn-modern btn-primary" onclick="cargarMedicamentos()">
+            <i class="fas fa-sync-alt me-1"></i>Cargar Registros
+          </button>
+        </div>
+        <div id="medicamentosContent" style="display: none">
+          <div class="table-responsive">
+            <table class="table-dark table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Paciente</th>
+                  <th>Medicamento</th>
+                  <th>Dosis</th>
+                  <th>Vía</th>
+                  <th>Fecha Programada</th>
+                  <th>Fecha Administración</th>
+                  <th>Enfermera</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="medicamentosTableBody">
+                <!-- Contenido dinámico -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nueva Asignación de Cama -->
+<div
+  class="modal fade"
+  id="modalAsignacionCama"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-bed me-2"></i>Nueva Asignación de Cama
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form
+        method="POST"
+        action="{{ url_for('asignaciones.crear_asignacion_cama') }}"
+      >
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label-dark">Paciente *</label>
+              <select class="form-select-dark" name="paciente_id" required>
+                <option value="">Seleccione un paciente</option>
+                {% for paciente in pacientes %}
+                <option value="{{ paciente.paciente_id }}">
+                  {{ paciente.nombre }} {{ paciente.apellido }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Cama Disponible *</label>
+              <select class="form-select-dark" name="cama_id" required>
+                <option value="">Seleccione una cama</option>
+                {% for cama in camas %}
+                <option value="{{ cama.cama_id }}">
+                  {{ cama.habitacion_nombre }} - Cama {{ cama.numero_cama }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Fecha y Hora de Ingreso *</label>
+              <input
+                type="datetime-local"
+                class="form-control-dark"
+                name="fecha_ingreso"
+                required
+              />
+            </div>
+            <div class="col-12">
+              <label class="form-label-dark">Motivo de Ingreso</label>
+              <textarea
+                class="form-control-dark"
+                name="motivo_ingreso"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            Asignar Cama
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Registrar Egreso -->
+<div class="modal fade" id="modalEgreso" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-sign-out-alt me-2"></i>Registrar Egreso
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form id="formEgreso">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label-dark">Fecha y Hora de Egreso *</label>
+              <input
+                type="datetime-local"
+                class="form-control-dark"
+                name="fecha_egreso"
+                required
+              />
+            </div>
+            <div class="col-12">
+              <label class="form-label-dark">Motivo de Egreso</label>
+              <textarea
+                class="form-control-dark"
+                name="motivo_egreso"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            Registrar Egreso
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nueva Asignación de Personal -->
+<div
+  class="modal fade"
+  id="modalAsignacionPersonal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user-nurse me-2"></i>Nueva Asignación de Personal
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form
+        method="POST"
+        action="{{ url_for('asignaciones.crear_asignacion_personal') }}"
+      >
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <label class="form-label-dark">Paciente *</label>
+              <select class="form-select-dark" name="paciente_id" required>
+                <option value="">Seleccione un paciente</option>
+                {% for paciente in pacientes %}
+                <option value="{{ paciente.paciente_id }}">
+                  {{ paciente.nombre }} {{ paciente.apellido }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Enfermera</label>
+              <select class="form-select-dark" name="enfermera_id">
+                <option value="">Seleccione una enfermera</option>
+                {% for enf in enfermeras %}
+                <option value="{{ enf.enfermera_id }}">
+                  {{ enf.nombre }} {{ enf.apellido }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Profesional</label>
+              <select class="form-select-dark" name="profesional_id">
+                <option value="">Seleccione un profesional</option>
+                {% for prof in profesionales %}
+                <option value="{{ prof.profesional_id }}">
+                  {{ prof.nombre }} {{ prof.apellido }} - {{ prof.especialidad
+                  }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Fecha de Asignación *</label>
+              <input
+                type="date"
+                class="form-control-dark"
+                name="fecha_asignacion"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Fecha Fin (opcional)</label>
+              <input
+                type="date"
+                class="form-control-dark"
+                name="fecha_fin_asignacion"
+              />
+            </div>
+            <div class="col-md-12">
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="es_principal"
+                  value="1"
+                  id="esPrincipal"
+                />
+                <label
+                  class="form-check-label form-label-dark"
+                  for="esPrincipal"
+                >
+                  ¿Es asignación principal?
+                </label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label-dark">Observaciones</label>
+              <textarea
+                class="form-control-dark"
+                name="observaciones"
+                rows="3"
+              ></textarea>
+            </div>
+            <div class="col-12">
+              <div class="alert alert-info-dark">
+                <i class="fas fa-info-circle me-2"></i>
+                Debe seleccionar al menos una enfermera o un profesional. El
+                tipo de asignación se determina automáticamente.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            Crear Asignación
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Función para mostrar notificaciones personalizadas
+  function showNotification(message, type) {
+    const container = document.getElementById("custom-alerts-container");
+    if (!container) {
+      console.error("No se encontró el contenedor de alertas");
+      return;
+    }
+
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${
+      type === "error" ? "danger" : "success"
+    } alert-dismissible fade show custom-alert mb-2`;
+    alertDiv.style.maxWidth = "350px";
+    alertDiv.style.width = "100%";
+    alertDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    alertDiv.style.border = "none";
+    alertDiv.style.borderRadius = "8px";
+    alertDiv.style.fontSize = "0.875rem";
+
+    const icon = type === "error" ? "exclamation-triangle" : "check-circle";
+    const title = type === "error" ? "Error" : "Éxito";
+
+    alertDiv.innerHTML = `
+    <div class="d-flex align-items-start">
+      <i class="fas fa-${icon} mt-1 me-2 ${
+      type === "error" ? "text-danger" : "text-success"
+    }" style="flex-shrink: 0;"></i>
+      <div class="flex-grow-1" style="min-width: 0;">
+        <strong class="d-block mb-1">${title}</strong>
+        <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+      </div>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+    </div>
+  `;
+
+    container.insertBefore(alertDiv, container.firstChild);
+
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+      }
+    }, 5000);
+  }
+
+  let currentAsignacionId = null;
+
+  function registrarEgreso(asignacionId) {
+    currentAsignacionId = asignacionId;
+    new bootstrap.Modal(document.getElementById("modalEgreso")).show();
+  }
+
+  document
+    .getElementById("formEgreso")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+
+      fetch(`/asignaciones/cama/egreso/${currentAsignacionId}`, {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            showNotification("Egreso registrado correctamente", "success");
+            setTimeout(() => location.reload(), 1000);
+          } else {
+            showNotification("Error: " + data.message, "error");
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          showNotification("Error al registrar el egreso", "error");
+        });
+    });
+
+  function cargarMedicamentos() {
+    fetch("/api/administracion-medicamentos")
+      .then((response) => response.json())
+      .then((data) => {
+        const tbody = document.getElementById("medicamentosTableBody");
+        tbody.innerHTML = "";
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="8" class="text-center text-muted-dark py-4">No hay registros de administración de medicamentos</td></tr>';
+          document.getElementById("medicamentosContent").style.display =
+            "block";
+          document.querySelector("#medicamentos .text-center").style.display =
+            "none";
+          return;
+        }
+
+        data.forEach((med) => {
+          // Formatear fechas
+          const formatFecha = (fechaStr) => {
+            if (!fechaStr) return "N/A";
+            const fecha = new Date(fechaStr);
+            return fecha.toLocaleDateString("es-ES", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          };
+
+          const row = `
+          <tr>
+            <td>${med.paciente_nombre} ${med.paciente_apellido}</td>
+            <td>${med.medicamento}</td>
+            <td>${med.dosis}</td>
+            <td><span class="badge bg-info">${
+              med.via_administracion
+            }</span></td>
+            <td>${formatFecha(med.fecha_hora_programada)}</td>
+            <td>${
+              med.fecha_hora_administracion
+                ? formatFecha(med.fecha_hora_administracion)
+                : '<span class="text-warning">Pendiente</span>'
+            }</td>
+            <td>${med.enfermera_nombre} ${med.enfermera_apellido}</td>
+            <td><span class="badge-${med.estado_administracion}">${
+            med.estado_administracion
+          }</span></td>
+          </tr>
+        `;
+          tbody.innerHTML += row;
+        });
+
+        document.getElementById("medicamentosContent").style.display = "block";
+        document.querySelector("#medicamentos .text-center").style.display =
+          "none";
+        showNotification(
+          `${data.length} registro(s) cargado(s) correctamente`,
+          "success"
+        );
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar medicamentos", "error");
+      });
+  }
+
+  // Filtros para Camas
+  function filtrarCamas() {
+    const searchTerm = document
+      .getElementById("searchCamas")
+      .value.toLowerCase();
+    const estadoFiltro = document.getElementById("filterEstadoCama").value;
+    let contador = 0;
+
+    document.querySelectorAll(".cama-card").forEach((card) => {
+      const paciente = card.getAttribute("data-paciente").toLowerCase();
+      const habitacion = card.getAttribute("data-habitacion").toLowerCase();
+      const estado = card.getAttribute("data-estado").toLowerCase();
+
+      const coincideBusqueda =
+        paciente.includes(searchTerm) || habitacion.includes(searchTerm);
+      const coincideEstado =
+        estadoFiltro === "todos" ||
+        (estadoFiltro === "activo" &&
+          !card.querySelector(".badge-secondary")) ||
+        (estadoFiltro === "egresado" && card.querySelector(".badge-secondary"));
+
+      if (coincideBusqueda && coincideEstado) {
+        card.style.display = "block";
+        contador++;
+      } else {
+        card.style.display = "none";
+      }
+    });
+
+    document.getElementById("contadorCamas").textContent = contador;
+  }
+
+  function resetearFiltrosCamas() {
+    document.getElementById("searchCamas").value = "";
+    document.getElementById("filterEstadoCama").value = "todos";
+    filtrarCamas();
+  }
+
+  // Filtros para Personal
+  function filtrarPersonal() {
+    const searchTerm = document
+      .getElementById("searchPersonal")
+      .value.toLowerCase();
+    const tipoFiltro = document.getElementById("filterTipoPersonal").value;
+    let contador = 0;
+
+    document.querySelectorAll(".personal-card").forEach((card) => {
+      const paciente = card.getAttribute("data-paciente").toLowerCase();
+      const personal = card.getAttribute("data-personal").toLowerCase();
+      const tipo = card.getAttribute("data-tipo");
+
+      const coincideBusqueda =
+        paciente.includes(searchTerm) || personal.includes(searchTerm);
+      const coincideTipo = tipoFiltro === "todos" || tipo === tipoFiltro;
+
+      if (coincideBusqueda && coincideTipo) {
+        card.style.display = "block";
+        contador++;
+      } else {
+        card.style.display = "none";
+      }
+    });
+
+    document.getElementById("contadorPersonal").textContent = contador;
+  }
+
+  function resetearFiltrosPersonal() {
+    document.getElementById("searchPersonal").value = "";
+    document.getElementById("filterTipoPersonal").value = "todos";
+    filtrarPersonal();
+  }
+
+  // Ver detalles de cama
+  function verDetalleCama(asignacionId) {
+    fetch(`/api/asignaciones/cama/${asignacionId}`)
+      .then((response) => response.json())
+      .then((asig) => {
+        const modalBody = `
+        <div class="asignacion-detalles">
+          <div class="modal-header bg-gradient-primary text-white p-4">
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-modern-md">
+                ${asig.paciente_nombre ? asig.paciente_nombre[0] : "?"}${
+          asig.paciente_apellido ? asig.paciente_apellido[0] : ""
+        }
+              </div>
+              <div>
+                <h4 class="mb-1">${asig.paciente_nombre || "N/A"} ${
+          asig.paciente_apellido || ""
+        }</h4>
+                <p class="mb-0 opacity-75">Asignación de Cama #${
+                  asig.asignacion_id || "N/A"
+                }</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-4">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3"><i class="fas fa-bed me-2"></i>Información de Cama</h6>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Número de Cama:</span>
+                    <span class="detalle-valor"><span class="badge bg-info">${
+                      asig.numero_cama || "N/A"
+                    }</span></span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Habitación:</span>
+                    <span class="detalle-valor">${
+                      asig.habitacion_nombre || "N/A"
+                    }</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3"><i class="fas fa-calendar me-2"></i>Fechas</h6>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Fecha de Ingreso:</span>
+                    <span class="detalle-valor">${
+                      asig.fecha_ingreso || "N/A"
+                    }</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Fecha de Egreso:</span>
+                    <span class="detalle-valor">${
+                      asig.fecha_egreso || "En estancia"
+                    }</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Estado:</span>
+                    <span class="detalle-valor"><span class="badge-${
+                      asig.estado_nombre
+                    }">${asig.estado_nombre || "N/A"}</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+        const modal = new bootstrap.Modal(document.createElement("div"));
+        const modalDiv = document.createElement("div");
+        modalDiv.className = "modal fade";
+        modalDiv.innerHTML = `
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">${modalBody}</div>
+        </div>
+      `;
+        document.body.appendChild(modalDiv);
+        const bsModal = new bootstrap.Modal(modalDiv);
+        bsModal.show();
+        modalDiv.addEventListener("hidden.bs.modal", () => modalDiv.remove());
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar los detalles", "error");
+      });
+  }
+
+  // Ver detalles de personal
+  function verDetallePersonal(asignacionId) {
+    fetch(`/api/asignaciones/personal/${asignacionId}`)
+      .then((response) => response.json())
+      .then((asig) => {
+        const modalBody = `
+        <div class="asignacion-detalles">
+          <div class="modal-header bg-gradient-primary text-white p-4">
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-modern-md">
+                ${asig.paciente_nombre ? asig.paciente_nombre[0] : "?"}${
+          asig.paciente_apellido ? asig.paciente_apellido[0] : ""
+        }
+              </div>
+              <div>
+                <h4 class="mb-1">${asig.paciente_nombre || "N/A"} ${
+          asig.paciente_apellido || ""
+        }</h4>
+                <p class="mb-0 opacity-75">Asignación de Personal #${
+                  asig.asignacion_id || "N/A"
+                }</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-4">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3"><i class="fas fa-user-nurse me-2"></i>Personal Asignado</h6>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Nombre:</span>
+                    <span class="detalle-valor">${
+                      asig.asignado_nombre || "N/A"
+                    } ${asig.asignado_apellido || ""}</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Tipo:</span>
+                    <span class="detalle-valor">${
+                      asig.tipo_asignacion || "N/A"
+                    }</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3"><i class="fas fa-calendar me-2"></i>Fechas</h6>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Fecha Asignación:</span>
+                    <span class="detalle-valor">${
+                      asig.fecha_asignacion || "N/A"
+                    }</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Fecha Fin:</span>
+                    <span class="detalle-valor">${
+                      asig.fecha_fin || "Indefinido"
+                    }</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Estado:</span>
+                    <span class="detalle-valor"><span class="badge-${
+                      asig.estado_nombre
+                    }">${asig.estado_nombre || "N/A"}</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            ${
+              asig.observaciones
+                ? `
+            <div class="detalle-seccion">
+              <h6 class="seccion-titulo mb-3"><i class="fas fa-comment-dots me-2"></i>Observaciones</h6>
+              <div class="card-dark">
+                <div class="card-body-dark">
+                  <p class="mb-0">${asig.observaciones}</p>
+                </div>
+              </div>
+            </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      `;
+
+        const modalDiv = document.createElement("div");
+        modalDiv.className = "modal fade";
+        modalDiv.innerHTML = `
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">${modalBody}</div>
+        </div>
+      `;
+        document.body.appendChild(modalDiv);
+        const bsModal = new bootstrap.Modal(modalDiv);
+        bsModal.show();
+        modalDiv.addEventListener("hidden.bs.modal", () => modalDiv.remove());
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar los detalles", "error");
+      });
+  }
+
+  // Event listeners
+  document.addEventListener("DOMContentLoaded", function () {
+    // Filtros de camas
+    const searchCamas = document.getElementById("searchCamas");
+    const filterEstadoCama = document.getElementById("filterEstadoCama");
+    const btnResetCamas = document.getElementById("btnResetCamas");
+
+    if (searchCamas) searchCamas.addEventListener("input", filtrarCamas);
+    if (filterEstadoCama)
+      filterEstadoCama.addEventListener("change", filtrarCamas);
+    if (btnResetCamas)
+      btnResetCamas.addEventListener("click", resetearFiltrosCamas);
+
+    // Filtros de personal
+    const searchPersonal = document.getElementById("searchPersonal");
+    const filterTipoPersonal = document.getElementById("filterTipoPersonal");
+    const btnResetPersonal = document.getElementById("btnResetPersonal");
+
+    if (searchPersonal)
+      searchPersonal.addEventListener("input", filtrarPersonal);
+    if (filterTipoPersonal)
+      filterTipoPersonal.addEventListener("change", filtrarPersonal);
+    if (btnResetPersonal)
+      btnResetPersonal.addEventListener("click", resetearFiltrosPersonal);
+  });
+</script>
+
+<style>
+  /* === ESTILOS ESPECÍFICOS PARA ASIGNACIONES === */
+
+  .asignacion-card-modern {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .asignacion-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+    border-color: var(--primary-color);
+  }
+
+  .asignacion-info-modern .info-item-modern {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+
+  .info-label-modern {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .info-value-modern {
+    color: var(--text-primary);
+    font-weight: 500;
+    max-width: 60%;
+    text-align: right;
+  }
+
+  .observaciones-preview .card-body-dark {
+    font-size: 0.8rem;
+    line-height: 1.3;
+    background: rgba(var(--primary-rgb), 0.05);
+    border-radius: 8px;
+  }
+
+  /* === ESTILOS BASE HEREDADOS === */
+
+  /* Header del Dashboard */
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-modern.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-modern.btn-xs {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Cards Oscuras */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .card-body-dark {
+    padding: 20px;
+  }
+
+  .card-title-dark {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* Form Controls Oscuros */
+  .form-control-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: var(--card-bg);
+  }
+
+  .form-control-dark::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .form-select-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-select-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-select-dark option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .input-group-text.bg-dark {
+    background: var(--sidebar-hover) !important;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* Avatar Moderno */
+  .avatar-modern-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: white;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  .avatar-modern-md {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .text-muted-dark {
+    color: var(--text-secondary) !important;
+  }
+
+  /* Badges Modernos */
+  .badge-activo {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-inactivo {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-pendiente {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-administrado {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-omitido {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-rechazado {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  /* Estado Vacío */
+  .empty-state-dark {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-dark i {
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-dark h6 {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-dark p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .border-dark {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Tabs Oscuros */
+  .nav-tabs-dark {
+    border-bottom: 1px solid #30363d;
+  }
+
+  .nav-tabs-dark .nav-link {
+    color: #8b949e;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+  }
+
+  .nav-tabs-dark .nav-link:hover {
+    color: #c9d1d9;
+    border-bottom-color: #58a6ff;
+  }
+
+  .nav-tabs-dark .nav-link.active {
+    color: #58a6ff;
+    border-bottom-color: #58a6ff;
+    background: none;
+  }
+
+  /* Alert Info Dark */
+  .alert-info-dark {
+    background: rgba(31, 111, 235, 0.1);
+    border: 1px solid rgba(31, 111, 235, 0.3);
+    color: #58a6ff;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+  }
+
+  /* Estilos para el modal de detalles */
+  .asignacion-detalles .detalle-seccion {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+
+  .asignacion-detalles .detalle-seccion:last-child {
+    border-bottom: none;
+  }
+
+  .seccion-titulo {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .detalle-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+  }
+
+  .detalle-item:last-child {
+    border-bottom: none;
+  }
+
+  .detalle-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .detalle-valor {
+    font-weight: 400;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  .bg-gradient-primary {
+    background: linear-gradient(
+      135deg,
+      var(--primary-color),
+      var(--primary-dark)
+    );
+  }
+
+  /* Form labels */
+  .form-label-dark {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Modal styles */
+  .modal-dark {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  .modal-header-dark {
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .modal-body-dark {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  .modal-footer-dark {
+    background-color: var(--card-bg);
+    border-top: 1px solid var(--border-color);
+  }
+
+  /* Variables CSS para colores */
+  :root {
+    --primary-rgb: 59, 130, 246;
+  }
+
+  /* Estilos para las notificaciones personalizadas */
+  #custom-alerts-container {
+    max-width: 400px !important;
+  }
+
+  .custom-alert {
+    max-width: 350px;
+    width: 100% !important;
+    animation: slideInRight 0.3s ease-out;
+    margin-bottom: 0.5rem;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .custom-alert.fade:not(.show) {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Estilos específicos para modo oscuro en modales */
+  [data-theme="dark"] .modal-content {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  [data-theme="dark"] .modal-header {
+    border-bottom-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .modal-footer {
+    border-top-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .form-label {
+    color: var(--text-primary);
+  }
+
+  /* Responsive para cards de asignaciones */
+  @media (max-width: 576px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 50%;
+    }
+
+    .asignacion-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+
+    .detalle-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detalle-valor {
+      text-align: left;
+      margin-top: 0.1rem;
+    }
+
+    #custom-alerts-container {
+      padding: 1rem !important;
+      max-width: 300px !important;
+    }
+
+    .custom-alert {
+      max-width: 280px !important;
+    }
+
+    .page-title-wrapper {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 24px;
+    }
+
+    .nav-tabs-dark .nav-link {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+
+    #custom-alerts-container {
+      max-width: 250px !important;
+    }
+
+    .custom-alert {
+      max-width: 230px !important;
+    }
+  }
+
+  /* Grid más denso */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+
+  /* Fade-in animation */
+  .fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Estilos para tabla de medicamentos */
+  .table-dark {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .table-dark thead {
+    background: var(--card-bg);
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  .table-dark thead th {
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  .table-dark tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+  }
+
+  .table-dark tbody tr:hover {
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .table-dark tbody td {
+    padding: 12px 16px;
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+</style>
+
+{% endblock %}

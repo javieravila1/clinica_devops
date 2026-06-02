@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Sistema de Gestión para Clínica de Cuidados Paliativos - Gestión integral de pacientes, citas y tratamientos."
+    />
+    <meta
+      name="keywords"
+      content="clínica, paliativos, cuidados, pacientes, citas, gestión médica"
+    />
+    <meta name="author" content="Clínica de Cuidados Paliativos" />
+    <title>{% block title %}Clínica de Cuidados Paliativos{% endblock %}</title>
+    <link
+      rel="icon"
+      href="/static/imgs/latido-del-corazonv2.png"
+      type="image/png"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="{{ url_for('static', filename='css/style.css') }}"
+      rel="stylesheet"
+    />
+    <style>
+      /* Variables CSS para modo claro y oscuro */
+      :root {
+        /* Colores modo claro */
+        --primary-color: #3498db;
+        --primary-dark: #2980b9;
+        --sidebar-bg: #ffffff;
+        --sidebar-text: #4a5568;
+        --sidebar-hover: #f7fafc;
+        --sidebar-active: #ebf8ff;
+        --sidebar-divider: #e2e8f0;
+        --sidebar-section: #718096;
+        --sidebar-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+        --main-bg: #f7fafc;
+        --content-bg: #ffffff;
+        --text-primary: #2d3748;
+        --text-secondary: #718096;
+        --border-color: #e2e8f0;
+        --card-bg: #ffffff;
+        --shadow: rgba(0, 0, 0, 0.05);
+        --topbar-bg: #ffffff;
+
+        --toggle-bg: #e2e8f0;
+        --toggle-circle: #ffffff;
+
+        --accent-color: #3498db;
+        --accent-light: #ebf8ff;
+      }
+
+      [data-theme="dark"] {
+        /* Colores modo oscuro */
+        --primary-color: #4da8da;
+        --primary-dark: #2980b9;
+        --sidebar-bg: #1a202c;
+        --sidebar-text: #e2e8f0;
+        --sidebar-hover: #2d3748;
+        --sidebar-active: #2a4365;
+        --sidebar-divider: #2d3748;
+        --sidebar-section: #a0aec0;
+        --sidebar-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
+          0 4px 6px -2px rgba(0, 0, 0, 0.2);
+
+        --main-bg: #171923;
+        --content-bg: #1a202c;
+        --text-primary: #f7fafc;
+        --text-secondary: #a0aec0;
+        --border-color: #2d3748;
+        --card-bg: #2d3748;
+        --shadow: rgba(0, 0, 0, 0.3);
+        --topbar-bg: #1a202c;
+
+        --toggle-bg: #4a5568;
+        --toggle-circle: #cbd5e1;
+
+        --accent-color: #4da8da;
+        --accent-light: #2a4365;
+      }
+
+      /* Reset y configuración base */
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        font-family: "Inter", sans-serif;
+        background-color: var(--main-bg);
+        color: var(--text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      /* Sidebar Styles - TAMAÑO REDUCIDO */
+      .sidebar {
+        width: 220px; /* Reducido de 280px */
+        height: 100vh;
+        background: var(--sidebar-bg);
+        transition: all 0.3s ease;
+        box-shadow: var(--sidebar-shadow);
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        border-right: 1px solid var(--sidebar-divider);
+      }
+
+      .sidebar.collapsed {
+        width: 60px; /* Reducido de 80px */
+      }
+
+      .sidebar-header {
+        padding: 1.25rem 1rem; /* Reducido padding */
+        border-bottom: 1px solid var(--sidebar-divider);
+        text-align: left;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem; /* Reducido gap */
+      }
+
+      .sidebar-brand {
+        color: var(--text-primary);
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 1.1rem; /* Reducido tamaño de fuente */
+        display: flex;
+        align-items: center;
+        gap: 0.5rem; /* Reducido gap */
+        transition: all 0.3s ease;
+      }
+
+      .sidebar-brand:hover {
+        color: var(--primary-color);
+      }
+
+      .fouc-fix {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s;
+      }
+
+      .brand-icon {
+        width: 32px; /* Reducido tamaño */
+        height: 32px; /* Reducido tamaño */
+        border-radius: 8px; /* Reducido radio de borde */
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--primary-dark)
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem; /* Reducido tamaño de fuente */
+        box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);
+      }
+
+      .sidebar.collapsed .sidebar-brand span {
+        display: none;
+      }
+
+      .sidebar.collapsed .sidebar-header {
+        padding: 1.25rem 0.5rem; /* Reducido padding */
+        justify-content: center;
+      }
+
+      .sidebar-nav {
+        padding: 1rem 0; /* Reducido padding */
+        list-style: none;
+        margin: 0;
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      .nav-item {
+        margin-bottom: 0.25rem; /* Reducido margen */
+        position: relative;
+      }
+
+      .nav-link {
+        color: var(--sidebar-text);
+        text-decoration: none;
+        padding: 0.75rem 1rem; /* Reducido padding */
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        position: relative;
+        overflow: hidden;
+        margin: 0 0.5rem; /* Reducido margen */
+        border-radius: 8px; /* Reducido radio de borde */
+        background: transparent;
+        font-weight: 500;
+        font-size: 0.9rem; /* Reducido tamaño de fuente */
+      }
+
+      /* Efecto hover mejorado */
+      .nav-link::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 3px; /* Reducido ancho */
+        height: 100%;
+        background: var(--primary-color);
+        transform: scaleY(0);
+        transition: transform 0.3s ease;
+        border-radius: 0 2px 2px 0; /* Reducido radio de borde */
+      }
+
+      .nav-link:hover {
+        color: var(--primary-color);
+        background: var(--sidebar-hover);
+        transform: translateX(2px); /* Reducido desplazamiento */
+      }
+
+      .nav-link:hover::before {
+        transform: scaleY(1);
+      }
+
+      /* Estado activo */
+      .nav-link.active {
+        color: var(--primary-color);
+        background: var(--sidebar-active);
+        box-shadow: 0 2px 4px rgba(52, 152, 219, 0.1); /* Reducida sombra */
+        transform: translateX(2px); /* Reducido desplazamiento */
+      }
+
+      .nav-link.active::before {
+        transform: scaleY(1);
+      }
+
+      .nav-link.active::after {
+        content: "";
+        position: absolute;
+        right: 0.75rem; /* Ajustado posición */
+        top: 50%;
+        transform: translateY(-50%);
+        width: 6px; /* Reducido tamaño */
+        height: 6px; /* Reducido tamaño */
+        background: var(--primary-color);
+        border-radius: 50%;
+        box-shadow: 0 0 6px rgba(52, 152, 219, 0.5); /* Reducida sombra */
+      }
+
+      .nav-icon {
+        width: 18px; /* Reducido ancho */
+        text-align: center;
+        font-size: 1rem; /* Reducido tamaño de fuente */
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 1;
+      }
+
+      .nav-link:hover .nav-icon {
+        transform: scale(1.05); /* Reducida escala */
+      }
+
+      .nav-link.active .nav-icon {
+        color: var(--primary-color);
+      }
+
+      .nav-text {
+        flex: 1;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 1;
+        font-size: 0.9rem; /* Reducido tamaño de fuente */
+      }
+
+      .sidebar.collapsed .nav-text {
+        display: none;
+      }
+
+      .nav-badge {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: white;
+        border-radius: 8px; /* Reducido radio de borde */
+        padding: 0.1rem 0.4rem; /* Reducido padding */
+        font-size: 0.7rem; /* Reducido tamaño de fuente */
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Reducida sombra */
+        position: relative;
+        z-index: 1;
+      }
+
+      .sidebar.collapsed .nav-badge {
+        display: none;
+      }
+
+      .nav-divider {
+        height: 1px;
+        background: var(--sidebar-divider);
+        margin: 0.75rem 1rem; /* Reducido margen */
+      }
+
+      .nav-section {
+        padding: 0.5rem 1rem; /* Reducido padding */
+        color: var(--sidebar-section);
+        font-size: 0.7rem; /* Reducido tamaño de fuente */
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .sidebar.collapsed .nav-section {
+        display: none;
+      }
+
+      /* User Profile in Sidebar - Reducido */
+      .user-profile {
+        padding: 1rem 1rem; /* Reducido padding */
+        border-top: 1px solid var(--sidebar-divider);
+        margin-top: auto;
+        flex-shrink: 0;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem; /* Reducido gap */
+        color: var(--text-primary);
+        position: relative;
+        z-index: 1;
+      }
+
+      .user-avatar {
+        width: 36px; /* Reducido tamaño */
+        height: 36px; /* Reducido tamaño */
+        border-radius: 8px; /* Reducido radio de borde */
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--primary-dark)
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: white;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Reducida sombra */
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        font-size: 0.95rem; /* Reducido tamaño de fuente */
+      }
+
+      .user-avatar::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.2) 0%,
+          transparent 100%
+        );
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .user-info:hover .user-avatar {
+        transform: scale(1.03); /* Reducida escala */
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15); /* Reducida sombra */
+      }
+
+      .user-info:hover .user-avatar::after {
+        opacity: 1;
+      }
+
+      .user-details {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .user-name {
+        font-weight: 600;
+        font-size: 0.85rem; /* Reducido tamaño de fuente */
+        margin-bottom: 0.15rem; /* Reducido margen */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .user-roles {
+        font-size: 0.7rem; /* Reducido tamaño de fuente */
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .user-actions {
+        display: flex;
+        gap: 0.25rem; /* Reducido gap */
+      }
+
+      .user-action {
+        color: var(--text-secondary);
+        background: none;
+        border: none;
+        width: 28px; /* Reducido tamaño */
+        height: 28px; /* Reducido tamaño */
+        border-radius: 6px; /* Reducido radio de borde */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        font-size: 0.85rem; /* Reducido tamaño de fuente */
+      }
+
+      .user-action:hover {
+        background: var(--sidebar-hover);
+        color: var(--primary-color);
+      }
+
+      .sidebar.collapsed .user-details {
+        display: none;
+      }
+
+      .sidebar.collapsed .user-profile {
+        padding: 0.75rem 0.5rem; /* Reducido padding */
+        justify-content: center;
+      }
+
+      .sidebar.collapsed .user-actions {
+        display: none;
+      }
+
+      /* Theme Toggle - Reducido */
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem; /* Reducido padding */
+        border-top: 1px solid var(--sidebar-divider);
+        margin-top: auto;
+        flex-shrink: 0;
+      }
+
+      .theme-toggle-label {
+        color: var(--sidebar-text);
+        font-size: 0.8rem; /* Reducido tamaño de fuente */
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px; /* Reducido ancho */
+        height: 22px; /* Reducido alto */
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--toggle-bg);
+        transition: 0.4s;
+        border-radius: 22px; /* Ajustado radio de borde */
+      }
+
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 16px; /* Reducido tamaño */
+        width: 16px; /* Reducido tamaño */
+        left: 3px; /* Ajustado posición */
+        bottom: 3px; /* Ajustado posición */
+        background-color: var(--toggle-circle);
+        transition: 0.4s;
+        border-radius: 50%;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* Reducida sombra */
+      }
+
+      input:checked + .toggle-slider {
+        background-color: var(--primary-color);
+      }
+
+      input:checked + .toggle-slider:before {
+        transform: translateX(22px); /* Ajustado desplazamiento */
+      }
+
+      .sidebar.collapsed .theme-toggle-label span {
+        display: none;
+      }
+
+      .sidebar.collapsed .theme-toggle {
+        justify-content: center;
+        padding: 0.75rem 0.5rem; /* Reducido padding */
+      }
+
+      /* Main Content Area - Ajustado al sidebar reducido */
+      .main-content {
+        margin-left: 220px; /* Ajustado al nuevo ancho del sidebar */
+        transition: all 0.3s ease;
+        min-height: 100vh;
+        background: var(--main-bg);
+        display: flex;
+        flex-direction: column;
+        width: calc(100% - 220px); /* Ajustado al nuevo ancho del sidebar */
+      }
+
+      .main-content.expanded {
+        margin-left: 60px; /* Ajustado al nuevo ancho del sidebar colapsado */
+        width: calc(
+          100% - 60px
+        ); /* Ajustado al nuevo ancho del sidebar colapsado */
+      }
+
+      .top-bar {
+        background: var(--topbar-bg);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem 1.5rem; /* Reducido padding */
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 1px 3px var(--shadow);
+        flex-shrink: 0;
+        z-index: 100;
+        transition: all 0.3s ease;
+      }
+
+      .sidebar-toggle {
+        background: var(--sidebar-hover);
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.1rem; /* Reducido tamaño de fuente */
+        cursor: pointer;
+        padding: 0.4rem; /* Reducido padding */
+        border-radius: 6px; /* Reducido radio de borde */
+        transition: all 0.3s ease;
+        width: 36px; /* Reducido tamaño */
+        height: 36px; /* Reducido tamaño */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .sidebar-toggle:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: rotate(90deg);
+      }
+
+      .page-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        font-size: 1.3rem; /* Reducido tamaño de fuente */
+        transition: color 0.3s ease;
+      }
+
+      /* Contenedor de contenido principal */
+      .content-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .content-container {
+        padding: 1.5rem; /* Reducido padding */
+        flex: 1;
+        overflow-y: auto;
+        background: var(--main-bg);
+        width: 100%;
+        transition: background-color 0.3s ease;
+      }
+
+      /* Aseguramos que el contenido ocupe todo el ancho disponible */
+      .content-container > .row,
+      .content-container > .card,
+      .content-container > div:first-child {
+        width: 100%;
+      }
+
+      /* Ajustes para las tarjetas en modo oscuro */
+      .card {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        transition: all 0.3s ease;
+        border-radius: 10px; /* Reducido radio de borde */
+        box-shadow: 0 1px 3px var(--shadow);
+      }
+
+      .card-header {
+        background-color: var(--card-bg);
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+        border-radius: 10px 10px 0 0 !important; /* Reducido radio de borde */
+      }
+
+      /* Mobile Responsive */
+      @media (max-width: 768px) {
+        .sidebar {
+          transform: translateX(-100%);
+          width: 220px; /* Mantenemos el ancho reducido en móvil */
+        }
+
+        .sidebar.mobile-open {
+          transform: translateX(0);
+        }
+
+        .main-content {
+          margin-left: 0;
+          width: 100%;
+        }
+
+        .main-content.expanded {
+          margin-left: 0;
+          width: 100%;
+        }
+
+        .top-bar {
+          padding: 1rem;
+          position: sticky;
+          top: 0;
+          background: var(--topbar-bg);
+        }
+
+        .content-container {
+          padding: 1rem;
+          width: 100%;
+        }
+      }
+
+      /* Custom Scrollbar for Sidebar */
+      .sidebar::-webkit-scrollbar {
+        width: 4px; /* Reducido ancho */
+      }
+
+      .sidebar::-webkit-scrollbar-track {
+        background: var(--sidebar-hover);
+      }
+
+      .sidebar::-webkit-scrollbar-thumb {
+        background: var(--sidebar-divider);
+        border-radius: 2px; /* Reducido radio de borde */
+      }
+
+      .sidebar::-webkit-scrollbar-thumb:hover {
+        background: var(--text-secondary);
+      }
+
+      /* Custom Scrollbar for Content */
+      .content-container::-webkit-scrollbar {
+        width: 6px; /* Reducido ancho */
+      }
+
+      .content-container::-webkit-scrollbar-track {
+        background: var(--main-bg);
+        border-radius: 3px; /* Reducido radio de borde */
+      }
+
+      .content-container::-webkit-scrollbar-thumb {
+        background: var(--text-secondary);
+        border-radius: 3px; /* Reducido radio de borde */
+      }
+
+      .content-container::-webkit-scrollbar-thumb:hover {
+        background: var(--text-primary);
+      }
+
+      /* Footer */
+      .main-footer {
+        background: var(--topbar-bg);
+        border-top: 1px solid var(--border-color);
+        padding: 0.75rem 1.5rem; /* Reducido padding */
+        margin-top: auto;
+        text-align: center;
+        color: var(--text-secondary);
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+        font-size: 0.9rem; /* Reducido tamaño de fuente */
+      }
+
+      /* Asegurar que las cards ocupen el ancho completo */
+      .card {
+        width: 100%;
+      }
+
+      /* Ajustes para las alertas en modo oscuro */
+      .alert {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        border-radius: 8px; /* Reducido radio de borde */
+      }
+
+      .alert-danger {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-color: rgba(220, 53, 69, 0.3);
+      }
+
+      .alert-success {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-color: rgba(25, 135, 84, 0.3);
+      }
+
+      /* Botones en modo oscuro */
+      .btn {
+        border-radius: 6px; /* Reducido radio de borde */
+        font-weight: 500;
+        transition: all 0.2s ease;
+        font-size: 0.9rem; /* Reducido tamaño de fuente */
+      }
+
+      .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+      }
+
+      .btn-primary:hover {
+        background-color: var(--primary-dark);
+        border-color: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3); /* Reducida sombra */
+      }
+
+      /* Tablas en modo oscuro */
+      .table {
+        color: var(--text-primary);
+        border-color: var(--border-color);
+        font-size: 0.9rem; /* Reducido tamaño de fuente */
+      }
+
+      .table th {
+        background-color: var(--sidebar-hover);
+        border-color: var(--border-color);
+        font-weight: 600;
+        font-size: 0.85rem; /* Reducido tamaño de fuente */
+      }
+
+      .table td {
+        border-color: var(--border-color);
+      }
+
+      /* Formularios en modo oscuro */
+      .form-control {
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        border-radius: 6px; /* Reducido radio de borde */
+        font-size: 0.9rem; /* Reducido tamaño de fuente */
+      }
+
+      .form-control:focus {
+        background-color: var(--card-bg);
+        border-color: var(--primary-color);
+        color: var(--text-primary);
+        box-shadow: 0 0 0 0.15rem rgba(52, 152, 219, 0.25); /* Reducida sombra */
+      }
+
+      .form-label {
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 0.9rem; /* Reducido tamaño de fuente */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content" class="fouc-fix">
+      <!-- Sidebar Rediseñado y Reducido -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <a
+            href="{{ url_for('dashboard.dashboard') }}"
+            class="sidebar-brand"
+            aria-label="Ir al inicio"
+          >
+            <div class="brand-icon">
+              <i class="fas fa-heartbeat" aria-hidden="true"></i>
+            </div>
+            <span>Clínica Paliativos</span>
+          </a>
+        </div>
+
+        <nav
+          class="sidebar-nav"
+          role="navigation"
+          aria-label="Navegación principal"
+        >
+          {% if 'user_id' in session %}
+          <!-- Sección Principal -->
+          <div class="nav-section">Principal</div>
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'dashboard.dashboard' }}"
+              href="{{ url_for('dashboard.dashboard') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-tachometer-alt"></i>
+              <span class="nav-text">Dashboard</span>
+            </a>
+          </li>
+
+          <!-- Sección Gestión de Personas -->
+          {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles %}
+          <div class="nav-section">Gestión de Personas</div>
+
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'pacientes.pacientes' }}"
+              href="{{ url_for('pacientes.pacientes') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-user-injured"></i>
+              <span class="nav-text">Pacientes</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'profesionales.profesionales' }}"
+              href="{{ url_for('profesionales.profesionales') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-user-md"></i>
+              <span class="nav-text">Profesionales</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'familiares.familiares' }}"
+              href="{{ url_for('familiares.familiares') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-user-friends"></i>
+              <span class="nav-text">Familiares</span>
+            </a>
+          </li>
+          {% endif %}
+
+          <!-- Sección Gestión Clínica -->
+          {% if 'admin' in session.user_roles or 'profesional' in
+          session.user_roles %}
+          <div class="nav-section">Gestión Clínica</div>
+
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'sesiones.sesiones' }}"
+              href="{{ url_for('sesiones.sesiones') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-stethoscope"></i>
+              <span class="nav-text">Sesiones</span>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'planes.planes' }}"
+              href="{{ url_for('planes.planes') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-clipboard-list"></i>
+              <span class="nav-text">Planes Terapéuticos</span>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'ordenes.ordenes' }}"
+              href="{{ url_for('ordenes.ordenes') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-file-medical"></i>
+              <span class="nav-text">Órdenes Médicas</span>
+            </a>
+          </li>
+          {% endif %}
+
+          <!-- Sección Gestión de Recursos -->
+          {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles %}
+          <div class="nav-section">Gestión de Recursos</div>
+
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'salas.salas' }}"
+              href="{{ url_for('salas.salas') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-door-open"></i>
+              <span class="nav-text">Salas</span>
+            </a>
+          </li>
+          {% endif %} {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles %}
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'asignaciones.asignaciones' }}"
+              href="{{ url_for('asignaciones.asignaciones') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-bed"></i>
+              <span class="nav-text">Asignaciones</span>
+            </a>
+          </li>
+          {% endif %}
+
+          <!-- Sección Gestión de Citas -->
+          {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles or 'profesional' in session.user_roles %}
+          <div class="nav-section">Gestión de Citas</div>
+
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'citas.citas' }}"
+              href="{{ url_for('citas.citas') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-calendar-alt"></i>
+              <span class="nav-text">Citas</span>
+            </a>
+          </li>
+          {% endif %}
+
+          <!-- Sección Análisis -->
+          {% if 'admin' in session.user_roles or 'auditor' in session.user_roles
+          or 'profesional' in session.user_roles %}
+          <div class="nav-section">Análisis</div>
+          <li class="nav-item">
+            <a
+              class="nav-link {{ 'active' if request.endpoint == 'reportes.reportes' }}"
+              href="{{ url_for('reportes.reportes') }}"
+              role="menuitem"
+            >
+              <i class="nav-icon fas fa-chart-bar"></i>
+              <span class="nav-text">Reportes & Analytics</span>
+            </a>
+          </li>
+          {% endif %} {% endif %}
+        </nav>
+
+        <!-- Theme Toggle -->
+        <div class="theme-toggle">
+          <label class="theme-toggle-label">
+            <i class="fas fa-moon"></i>
+            <span>Modo Oscuro</span>
+          </label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="themeToggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- User Profile Section - Reducido -->
+        {% if 'user_id' in session %}
+        <div class="user-profile">
+          <div class="user-info">
+            <div class="user-avatar">{{ session.username[0]|upper }}</div>
+            <div class="user-details">
+              <div class="user-name">{{ session.username }}</div>
+              <div class="user-roles">{{ session.user_roles|join(', ') }}</div>
+            </div>
+            <div class="user-actions">
+              <a
+                href="{{ url_for('logout') }}"
+                class="user-action"
+                title="Cerrar Sesión"
+                aria-label="Cerrar sesión"
+              >
+                <i class="fas fa-sign-out-alt"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </aside>
+
+      <!-- Main Content -->
+      <div class="main-content" id="mainContent">
+        <!-- Top Bar -->
+        <div class="top-bar">
+          <div class="d-flex align-items-center">
+            <button
+              class="sidebar-toggle me-3"
+              id="sidebarToggle"
+              aria-label="Alternar sidebar"
+            >
+              <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="page-title">
+              {% block page_title %}Dashboard{% endblock %}
+            </h1>
+          </div>
+        </div>
+
+        <!-- Content Wrapper -->
+        <div class="content-wrapper">
+          <!-- Flash Messages -->
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div
+            class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show m-4"
+            role="alert"
+            aria-live="assertive"
+          >
+            <div class="d-flex align-items-center">
+              <i
+                class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"
+              ></i>
+              <span>{{ message }}</span>
+            </div>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+              aria-label="Cerrar mensaje"
+            ></button>
+          </div>
+          {% endfor %} {% endif %} {% endwith %}
+
+          <!-- Page Content -->
+          <div class="content-container">{% block content %}{% endblock %}</div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+          <p class="mb-0">
+            Sistema de Gestión - Clínica de Cuidados Paliativos &copy; 2025
+          </p>
+        </footer>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/heatmap.js"></script>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.getElementById("mainContent");
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const themeToggle = document.getElementById("themeToggle");
+        const isMobile = window.innerWidth <= 768;
+        var content = document.getElementById("content");
+        if (content) {
+          // Forzamos un reflow para asegurar que la transición se aplica
+          content.offsetHeight;
+          content.classList.remove("fouc-fix");
+        }
+        // Toggle sidebar
+        sidebarToggle.addEventListener("click", function () {
+          if (isMobile) {
+            sidebar.classList.toggle("mobile-open");
+          } else {
+            sidebar.classList.toggle("collapsed");
+            mainContent.classList.toggle("expanded");
+          }
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener("click", function (event) {
+          if (isMobile && sidebar.classList.contains("mobile-open")) {
+            if (
+              !sidebar.contains(event.target) &&
+              !sidebarToggle.contains(event.target)
+            ) {
+              sidebar.classList.remove("mobile-open");
+            }
+          }
+        });
+
+        // Add active state to current page
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll(".nav-link");
+        navLinks.forEach((link) => {
+          if (link.getAttribute("href") === currentPath) {
+            link.classList.add("active");
+          }
+        });
+
+        // Theme toggle functionality
+        function initializeTheme() {
+          const savedTheme = localStorage.getItem("theme") || "light";
+          document.documentElement.setAttribute("data-theme", savedTheme);
+          themeToggle.checked = savedTheme === "dark";
+        }
+
+        themeToggle.addEventListener("change", function () {
+          if (this.checked) {
+            document.documentElement.setAttribute("data-theme", "dark");
+            localStorage.setItem("theme", "dark");
+          } else {
+            document.documentElement.setAttribute("data-theme", "light");
+            localStorage.setItem("theme", "light");
+          }
+        });
+
+        // Initialize theme on page load
+        initializeTheme();
+
+        // Ensure content takes full width
+        function adjustContentWidth() {
+          const contentContainer = document.querySelector(".content-container");
+          if (contentContainer) {
+            contentContainer.style.minHeight = "calc(100vh - 140px)";
+          }
+        }
+
+        adjustContentWidth();
+        window.addEventListener("resize", adjustContentWidth);
+      });
+    </script>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

@@ -1,0 +1,1793 @@
+{% extends "base.html" %} {% block title %}Gestión de Profesionales{% endblock
+%} {% block content %}
+<!-- Contenedor para mensajes personalizados -->
+<div
+  id="custom-alerts-container"
+  class="position-fixed top-0 end-0 p-3"
+  style="z-index: 9999; max-width: 400px"
+></div>
+
+<!-- Modal de confirmación para cambiar estado -->
+<div
+  class="modal fade"
+  id="modalConfirmacionEstado"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar cambio de estado</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center">
+          <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+          <p id="confirmacionMensaje" class="mb-0">
+            ¿Está seguro de realizar esta acción?
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button
+          type="button"
+          class="btn-modern btn-outline"
+          data-bs-dismiss="modal"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-modern btn-primary"
+          id="btnConfirmarAccion"
+        >
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-user-md title-icon"></i>
+    <h2 class="page-title mb-0">Gestión de Profesionales</h2>
+  </div>
+  {% if 'admin' in session.user_roles %}
+  <button
+    class="btn-modern btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#modalProfesional"
+  >
+    <i class="fas fa-plus me-1"></i>Nuevo Profesional
+  </button>
+  {% endif %}
+</div>
+
+<!-- Filtros y búsqueda compactos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark"
+            ><i class="fas fa-search"></i
+          ></span>
+          <input
+            type="text"
+            class="form-control-dark form-control-sm"
+            id="searchInput"
+            placeholder="Buscar profesionales..."
+          />
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-2 justify-content-end">
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterEstado"
+            style="max-width: 150px"
+          >
+            <option value="todos">Todos</option>
+            <option value="activo">Activos</option>
+            <option value="inactivo">Inactivos</option>
+          </select>
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterEspecialidad"
+            style="max-width: 180px"
+          >
+            <option value="todas">Todas las especialidades</option>
+            <option value="Oncología">Oncología</option>
+            <option value="Psicología">Psicología</option>
+            <option value="Fisioterapia">Fisioterapia</option>
+            <!-- Más opciones según las especialidades existentes -->
+          </select>
+          <select
+            class="form-select-dark form-select-sm"
+            id="itemsPerPage"
+            style="max-width: 120px"
+          >
+            <option value="8">8 por página</option>
+            <option value="12" selected>12 por página</option>
+            <option value="16">16 por página</option>
+            <option value="20">20 por página</option>
+          </select>
+          <button
+            class="btn-modern btn-outline btn-sm"
+            id="btnResetFilters"
+            title="Restablecer filtros"
+          >
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de Cards Compactas -->
+<div class="row g-3" id="cardsContainer">
+  {% for profesional in profesionales %}
+  <div
+    class="col-xxl-3 col-xl-4 col-lg-4 col-md-6 col-sm-6 fade-in profesional-card"
+    data-estado="{{ profesional.estado_nombre }}"
+    data-especialidad="{{ profesional.especialidad }}"
+    data-nombre="{{ profesional.nombre }} {{ profesional.apellido }}"
+    data-profesional-id="{{ profesional.profesional_id }}"
+  >
+    <div class="card-dark h-100 profesional-card-modern">
+      <div class="card-body-dark p-3">
+        <!-- Header compacto -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center" style="min-width: 0; flex: 1">
+            <div class="avatar-modern-sm me-2 flex-shrink-0">
+              {{ profesional.nombre[0] }}{{ profesional.apellido[0] }}
+            </div>
+            <div style="min-width: 0; flex: 1">
+              <h6 class="card-title-dark mb-0 text-truncate">
+                {{ profesional.nombre }} {{ profesional.apellido }}
+              </h6>
+              <small class="text-muted-dark"
+                >ID: #{{ profesional.profesional_id }}</small
+              >
+            </div>
+          </div>
+          <span
+            class="badge-modern badge-{{ 'success' if profesional.estado_nombre == 'activo' else 'secondary' }} flex-shrink-0"
+          >
+            {{ profesional.estado_nombre|title }}
+          </span>
+        </div>
+
+        <!-- Información mínima del profesional -->
+        <div class="profesional-info-modern mb-2">
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-stethoscope me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark"
+              >{{ profesional.especialidad }}</small
+            >
+          </div>
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-clock me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark"
+              >{{ profesional.horario_inicio.strftime('%H:%M') }} - {{
+              profesional.horario_fin.strftime('%H:%M') }}</small
+            >
+          </div>
+          {% if profesional.telefono %}
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-phone me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark">{{ profesional.telefono }}</small>
+          </div>
+          {% endif %} {% if profesional.email %}
+          <div class="info-item-modern">
+            <i
+              class="fas fa-envelope me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark text-truncate d-block"
+              >{{ profesional.email }}</small
+            >
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Acciones compactas -->
+        <div class="d-flex justify-content-between pt-2 border-top border-dark">
+          <button
+            class="btn-modern btn-outline btn-xs btn-ver"
+            data-profesional-id="{{ profesional.profesional_id }}"
+            title="Ver detalles"
+          >
+            <i class="fas fa-eye"></i>
+          </button>
+          {% if 'admin' in session.user_roles %}
+          <div class="btn-group btn-group-sm">
+            <button
+              class="btn-modern btn-outline btn-xs btn-editar"
+              data-profesional-id="{{ profesional.profesional_id }}"
+              title="Editar"
+            >
+              <i class="fas fa-edit"></i>
+            </button>
+            <button
+              class="btn-modern btn-outline btn-xs btn-cambiar-estado"
+              data-profesional-id="{{ profesional.profesional_id }}"
+              data-estado-actual="{{ profesional.estado_nombre }}"
+              title="{{ 'Desactivar' if profesional.estado_nombre == 'activo' else 'Activar' }}"
+            >
+              <i
+                class="fas fa-{{ 'times' if profesional.estado_nombre == 'activo' else 'check' }}"
+              ></i>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card-dark text-center py-4">
+      <div class="card-body-dark">
+        <div class="empty-state-dark">
+          <i class="fas fa-user-md fa-2x mb-3"></i>
+          <h6>No hay profesionales registrados</h6>
+          <p class="mb-2">Comience agregando un nuevo profesional.</p>
+          {% if 'admin' in session.user_roles %}
+          <button
+            class="btn-modern btn-primary mt-1"
+            data-bs-toggle="modal"
+            data-bs-target="#modalProfesional"
+          >
+            <i class="fas fa-plus me-1"></i>Agregar Primer Profesional
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Contador de profesionales y paginación -->
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <div class="text-muted-dark">
+    Mostrando
+    <span id="contadorProfesionales">0</span>
+    de
+    <span id="totalProfesionales">{{ profesionales|length }}</span>
+    profesional(es)
+  </div>
+
+  <!-- Paginación del lado del cliente -->
+  <nav aria-label="Paginación de profesionales" id="paginationContainer">
+    <ul class="pagination pagination-sm mb-0" id="paginationControls">
+      <!-- Los controles de paginación se generarán dinámicamente con JavaScript -->
+    </ul>
+  </nav>
+</div>
+
+<!-- Modal para nuevo profesional -->
+<div class="modal fade" id="modalProfesional" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user-md me-2"></i>Nuevo Profesional
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form id="formProfesional">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Identificación *</label>
+                <input
+                  type="text"
+                  class="form-control-dark"
+                  name="identificacion"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Especialidad *</label>
+                <select class="form-select-dark" name="especialidad" required>
+                  <option value="">Seleccionar especialidad</option>
+                  <option value="Oncología">Oncología</option>
+                  <option value="Psicología">Psicología</option>
+                  <option value="Fisioterapia">Fisioterapia</option>
+                  <option value="Enfermería">Enfermería</option>
+                  <option value="Medicina General">Medicina General</option>
+                  <option value="Terapia Ocupacional">
+                    Terapia Ocupacional
+                  </option>
+                  <option value="Nutrición">Nutrición</option>
+                  <option value="Workflow">Workflow</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Nombre *</label>
+                <input
+                  type="text"
+                  class="form-control-dark"
+                  name="nombre"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Apellido *</label>
+                <input
+                  type="text"
+                  class="form-control-dark"
+                  name="apellido"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Horario Inicio *</label>
+                <input
+                  type="time"
+                  class="form-control-dark"
+                  name="horario_inicio"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Horario Fin *</label>
+                <input
+                  type="time"
+                  class="form-control-dark"
+                  name="horario_fin"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                <input type="tel" class="form-control-dark" name="telefono" />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control-dark" name="email" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Guardar Profesional
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles -->
+<div class="modal fade" id="modalVerProfesional" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user-md me-2"></i>Detalles del Profesional
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body p-0" id="detallesProfesional">
+        <!-- Los detalles se cargarán aquí via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para editar profesional -->
+<div class="modal fade" id="modalEditarProfesional" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-edit me-2"></i>Editar Profesional
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form id="formEditarProfesional">
+        <div class="modal-body" id="formEditarProfesionalBody">
+          <!-- El formulario se cargará aquí via AJAX -->
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Actualizar Profesional
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // Variables globales para manejar la paginación
+  let currentPage = 1;
+  let itemsPerPage = 12;
+  let filteredProfesionales = [];
+
+  // Variables globales para manejar la confirmación
+  let profesionalEstadoActual = null;
+  let estadoActualProfesional = null;
+  let botonEstadoActual = null;
+
+  // Función mejorada para mostrar notificaciones personalizadas
+  function showNotification(message, type) {
+    const container = document.getElementById("custom-alerts-container");
+    if (!container) {
+      console.error("No se encontró el contenedor de alertas");
+      return;
+    }
+
+    // Crear elemento de alerta
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${
+      type === "error" ? "danger" : "success"
+    } alert-dismissible fade show custom-alert mb-2`;
+    alertDiv.style.maxWidth = "350px";
+    alertDiv.style.width = "100%";
+    alertDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    alertDiv.style.border = "none";
+    alertDiv.style.borderRadius = "8px";
+    alertDiv.style.fontSize = "0.875rem";
+
+    // Icono según el tipo
+    const icon = type === "error" ? "exclamation-triangle" : "check-circle";
+    const title = type === "error" ? "Error" : "Éxito";
+
+    alertDiv.innerHTML = `
+      <div class="d-flex align-items-start">
+        <i class="fas fa-${icon} mt-1 me-2 ${
+      type === "error" ? "text-danger" : "text-success"
+    }" style="flex-shrink: 0;"></i>
+        <div class="flex-grow-1" style="min-width: 0;">
+          <strong class="d-block mb-1">${title}</strong>
+          <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+      </div>
+    `;
+
+    // Agregar al contenedor (al inicio para que las nuevas aparezcan arriba)
+    container.insertBefore(alertDiv, container.firstChild);
+
+    // Auto-eliminar después de 5 segundos
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+      }
+    }, 5000);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Inicializar la paginación
+    initPagination();
+
+    // Manejar el botón de ver detalles
+    document.querySelectorAll(".btn-ver").forEach((button) => {
+      button.addEventListener("click", function () {
+        const profesionalId = this.getAttribute("data-profesional-id");
+        cargarDetallesProfesional(profesionalId);
+      });
+    });
+
+    // Manejar el botón de editar
+    document.querySelectorAll(".btn-editar").forEach((button) => {
+      button.addEventListener("click", function () {
+        const profesionalId = this.getAttribute("data-profesional-id");
+        cargarFormularioEdicion(profesionalId);
+      });
+    });
+
+    // Manejar el botón de cambiar estado
+    document.querySelectorAll(".btn-cambiar-estado").forEach((button) => {
+      button.addEventListener("click", function () {
+        const profesionalId = this.getAttribute("data-profesional-id");
+        const estadoActual = this.getAttribute("data-estado-actual");
+
+        // Guardar los datos para usar en la confirmación
+        profesionalEstadoActual = profesionalId;
+        estadoActualProfesional = estadoActual;
+        botonEstadoActual = this;
+
+        // Mostrar modal de confirmación personalizado
+        mostrarModalConfirmacion(estadoActual);
+      });
+    });
+
+    // Configurar el botón de confirmar en el modal
+    document
+      .getElementById("btnConfirmarAccion")
+      .addEventListener("click", function () {
+        if (
+          profesionalEstadoActual &&
+          estadoActualProfesional &&
+          botonEstadoActual
+        ) {
+          cambiarEstadoProfesional(
+            profesionalEstadoActual,
+            estadoActualProfesional,
+            botonEstadoActual
+          );
+          // Cerrar el modal
+          const modal = bootstrap.Modal.getInstance(
+            document.getElementById("modalConfirmacionEstado")
+          );
+          modal.hide();
+        }
+      });
+
+    // Filtros y búsqueda
+    const searchInput = document.getElementById("searchInput");
+    const filterEstado = document.getElementById("filterEstado");
+    const filterEspecialidad = document.getElementById("filterEspecialidad");
+    const itemsPerPageSelect = document.getElementById("itemsPerPage");
+    const btnResetFilters = document.getElementById("btnResetFilters");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        filtrarProfesionales();
+        updatePagination();
+      });
+    }
+
+    if (filterEstado) {
+      filterEstado.addEventListener("change", function () {
+        filtrarProfesionales();
+        updatePagination();
+      });
+    }
+
+    if (filterEspecialidad) {
+      filterEspecialidad.addEventListener("change", function () {
+        filtrarProfesionales();
+        updatePagination();
+      });
+    }
+
+    if (itemsPerPageSelect) {
+      itemsPerPageSelect.addEventListener("change", function () {
+        itemsPerPage = parseInt(this.value);
+        currentPage = 1;
+        updatePagination();
+      });
+    }
+
+    if (btnResetFilters) {
+      btnResetFilters.addEventListener("click", resetearFiltros);
+    }
+
+    // Manejar el formulario de creación
+    const formProfesional = document.getElementById("formProfesional");
+    if (formProfesional) {
+      formProfesional.addEventListener("submit", function (e) {
+        e.preventDefault();
+        crearProfesional();
+      });
+    }
+
+    // Actualizar contador inicial
+    updateCounter();
+  });
+
+  // Función para inicializar la paginación
+  function initPagination() {
+    // Obtener todos los profesionales
+    const allProfesionales = Array.from(
+      document.querySelectorAll(".profesional-card")
+    );
+
+    // Inicializar la lista filtrada con todos los profesionales
+    filteredProfesionales = allProfesionales;
+
+    // Actualizar la paginación
+    updatePagination();
+  }
+
+  // Función para actualizar la paginación
+  function updatePagination() {
+    const totalProfesionales = filteredProfesionales.length;
+    const totalPages = Math.ceil(totalProfesionales / itemsPerPage);
+
+    // Asegurarse de que la página actual sea válida
+    if (currentPage > totalPages && totalPages > 0) {
+      currentPage = totalPages;
+    } else if (totalPages === 0) {
+      currentPage = 1;
+    }
+
+    // Ocultar todos los profesionales primero
+    document.querySelectorAll(".profesional-card").forEach((card) => {
+      card.style.display = "none";
+    });
+
+    // Mostrar solo los profesionales de la página actual
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const profesionalesToShow = filteredProfesionales.slice(
+      startIndex,
+      endIndex
+    );
+
+    profesionalesToShow.forEach((card) => {
+      card.style.display = "block";
+    });
+
+    // Actualizar contador
+    updateCounter();
+
+    // Generar controles de paginación
+    generatePaginationControls(totalPages);
+  }
+
+  // Función para generar los controles de paginación
+  function generatePaginationControls(totalPages) {
+    const paginationContainer = document.getElementById("paginationControls");
+
+    if (totalPages <= 1) {
+      paginationContainer.innerHTML = "";
+      document.getElementById("paginationContainer").style.display = "none";
+      return;
+    }
+
+    document.getElementById("paginationContainer").style.display = "block";
+
+    let paginationHTML = "";
+
+    // Botón anterior
+    paginationHTML += `
+      <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+        <a class="page-link" href="#" onclick="changePage(${
+          currentPage - 1
+        }); return false;">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+    `;
+
+    // Páginas
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    // Ajustar si estamos cerca del final
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    // Primera página y puntos suspensivos si es necesario
+    if (startPage > 1) {
+      paginationHTML += `
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="changePage(1); return false;">1</a>
+        </li>
+      `;
+      if (startPage > 2) {
+        paginationHTML += `
+          <li class="page-item disabled">
+            <span class="page-link">...</span>
+          </li>
+        `;
+      }
+    }
+
+    // Páginas visibles
+    for (let i = startPage; i <= endPage; i++) {
+      paginationHTML += `
+        <li class="page-item ${i === currentPage ? "active" : ""}">
+          <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+        </li>
+      `;
+    }
+
+    // Última página y puntos suspensivos si es necesario
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        paginationHTML += `
+          <li class="page-item disabled">
+            <span class="page-link">...</span>
+          </li>
+        `;
+      }
+      paginationHTML += `
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="changePage(${totalPages}); return false;">${totalPages}</a>
+        </li>
+      `;
+    }
+
+    // Botón siguiente
+    paginationHTML += `
+      <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+        <a class="page-link" href="#" onclick="changePage(${
+          currentPage + 1
+        }); return false;">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    `;
+
+    paginationContainer.innerHTML = paginationHTML;
+  }
+
+  // Función para cambiar de página
+  function changePage(page) {
+    currentPage = page;
+    updatePagination();
+
+    // Scroll suave hacia arriba
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  // Función para actualizar el contador
+  function updateCounter() {
+    const totalProfesionales = filteredProfesionales.length;
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, totalProfesionales);
+
+    document.getElementById("contadorProfesionales").textContent =
+      totalProfesionales > 0 ? `${startIndex}-${endIndex}` : "0";
+    document.getElementById("totalProfesionales").textContent =
+      totalProfesionales;
+  }
+
+  function mostrarModalConfirmacion(estadoActual) {
+    const accion = estadoActual === "activo" ? "desactivar" : "activar";
+    const mensaje = `¿Está seguro de ${accion} este profesional?`;
+
+    document.getElementById("confirmacionMensaje").textContent = mensaje;
+
+    const modal = new bootstrap.Modal(
+      document.getElementById("modalConfirmacionEstado")
+    );
+    modal.show();
+  }
+
+  function cambiarEstadoProfesional(profesionalId, estadoActual, button) {
+    const nuevoEstado = estadoActual === "activo" ? "inactivo" : "activo";
+
+    // Mostrar indicador de carga
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+
+    fetch(`/profesionales/cambiar-estado/${profesionalId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ nuevo_estado: nuevoEstado }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showNotification(data.message, "success");
+          // Recargar después de 1.5 segundos
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
+        } else {
+          throw new Error(data.error || "Error desconocido");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification(
+          "Error al cambiar el estado del profesional: " + error.message,
+          "error"
+        );
+        // Restaurar botón
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+      });
+  }
+
+  function filtrarProfesionales() {
+    const searchTerm = document
+      .getElementById("searchInput")
+      .value.toLowerCase();
+    const estadoFiltro = document.getElementById("filterEstado").value;
+    const especialidadFiltro =
+      document.getElementById("filterEspecialidad").value;
+
+    // Obtener todos los profesionales
+    const allProfesionales = Array.from(
+      document.querySelectorAll(".profesional-card")
+    );
+
+    // Filtrar profesionales
+    filteredProfesionales = allProfesionales.filter((card) => {
+      const nombre = card.getAttribute("data-nombre").toLowerCase();
+      const estado = card.getAttribute("data-estado");
+      const especialidad = card.getAttribute("data-especialidad");
+
+      const coincideNombre = nombre.includes(searchTerm);
+      const coincideEstado =
+        estadoFiltro === "todos" || estado === estadoFiltro;
+      const coincideEspecialidad =
+        especialidadFiltro === "todas" || especialidad === especialidadFiltro;
+
+      return coincideNombre && coincideEstado && coincideEspecialidad;
+    });
+
+    // Reiniciar a la primera página después de filtrar
+    currentPage = 1;
+  }
+
+  function resetearFiltros() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("filterEstado").value = "todos";
+    document.getElementById("filterEspecialidad").value = "todas";
+    document.getElementById("itemsPerPage").value = "12";
+    itemsPerPage = 12;
+    currentPage = 1;
+    filtrarProfesionales();
+    updatePagination();
+  }
+
+  function cargarDetallesProfesional(profesionalId) {
+    fetch(`/api/profesionales/${profesionalId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((profesional) => {
+        const modalBody = document.getElementById("detallesProfesional");
+        modalBody.innerHTML = `
+          <div class="profesional-detalles">
+            <!-- Header con información principal -->
+            <div class="profesional-header p-4" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white;">
+              <div class="d-flex align-items-center">
+                <div class="avatar-modern-md me-3">
+                  ${profesional.nombre[0]}${profesional.apellido[0]}
+                </div>
+                <div>
+                  <h4 class="mb-1">${profesional.nombre} ${
+          profesional.apellido
+        }</h4>
+                  <p class="mb-0 opacity-75">ID: #${
+                    profesional.profesional_id
+                  } | ${profesional.identificacion}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Cuerpo de detalles -->
+            <div class="p-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-user-md me-2"></i>Información Profesional
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Especialidad:</span>
+                      <span class="detalle-valor">${
+                        profesional.especialidad
+                      }</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Horario:</span>
+                      <span class="detalle-valor">${
+                        profesional.horario_inicio
+                      } - ${profesional.horario_fin}</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Estado:</span>
+                      <span class="detalle-valor">
+                        <span class="badge-modern badge-${
+                          profesional.estado_nombre === "activo"
+                            ? "success"
+                            : "secondary"
+                        }">
+                          ${profesional.estado_nombre}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-address-book me-2"></i>Información de Contacto
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Teléfono:</span>
+                      <span class="detalle-valor">
+                        ${
+                          profesional.telefono
+                            ? `
+                          <a href="tel:${profesional.telefono}" class="text-decoration-none">
+                            <i class="fas fa-phone me-1"></i>${profesional.telefono}
+                          </a>
+                        `
+                            : "N/A"
+                        }
+                      </span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Email:</span>
+                      <span class="detalle-valor">
+                        ${
+                          profesional.email
+                            ? `
+                          <a href="mailto:${profesional.email}" class="text-decoration-none">
+                            <i class="fas fa-envelope me-1"></i>${profesional.email}
+                          </a>
+                        `
+                            : "N/A"
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Mostrar el modal correctamente
+        const modalElement = document.getElementById("modalVerProfesional");
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification(
+          "Error al cargar los detalles del profesional",
+          "error"
+        );
+      });
+  }
+
+  function cargarFormularioEdicion(profesionalId) {
+    fetch(`/api/profesionales/${profesionalId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((profesional) => {
+        const modalBody = document.getElementById("formEditarProfesionalBody");
+
+        modalBody.innerHTML = `
+                <input type="hidden" name="profesional_id" value="${
+                  profesional.profesional_id
+                }">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Identificación *</label>
+                            <input type="text" class="form-control-dark" name="identificacion" value="${
+                              profesional.identificacion
+                            }" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Especialidad *</label>
+                            <select class="form-select-dark" name="especialidad" required>
+                              <option value="">Seleccionar especialidad</option>
+                              <option value="Oncología" ${
+                                profesional.especialidad === "Oncología"
+                                  ? "selected"
+                                  : ""
+                              }>Oncología</option>
+                              <option value="Psicología" ${
+                                profesional.especialidad === "Psicología"
+                                  ? "selected"
+                                  : ""
+                              }>Psicología</option>
+                              <option value="Fisioterapia" ${
+                                profesional.especialidad === "Fisioterapia"
+                                  ? "selected"
+                                  : ""
+                              }>Fisioterapia</option>
+                              <option value="Enfermería" ${
+                                profesional.especialidad === "Enfermería"
+                                  ? "selected"
+                                  : ""
+                              }>Enfermería</option>
+                              <option value="Medicina General" ${
+                                profesional.especialidad === "Medicina General"
+                                  ? "selected"
+                                  : ""
+                              }>Medicina General</option>
+                              <option value="Terapia Ocupacional" ${
+                                profesional.especialidad ===
+                                "Terapia Ocupacional"
+                                  ? "selected"
+                                  : ""
+                              }>Terapia Ocupacional</option>
+                              <option value="Nutrición" ${
+                                profesional.especialidad === "Nutrición"
+                                  ? "selected"
+                                  : ""
+                              }>Nutrición</option>
+                              <option value="Workflow" ${
+                                profesional.especialidad === "Workflow"
+                                  ? "selected"
+                                  : ""
+                              }>Workflow</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <input type="text" class="form-control-dark" name="nombre" value="${
+                              profesional.nombre
+                            }" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Apellido *</label>
+                            <input type="text" class="form-control-dark" name="apellido" value="${
+                              profesional.apellido
+                            }" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Horario Inicio *</label>
+                            <input type="time" class="form-control-dark" name="horario_inicio" value="${
+                              profesional.horario_inicio
+                            }" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Horario Fin *</label>
+                            <input type="time" class="form-control-dark" name="horario_fin" value="${
+                              profesional.horario_fin
+                            }" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control-dark" name="telefono" value="${
+                              profesional.telefono || ""
+                            }">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control-dark" name="email" value="${
+                              profesional.email || ""
+                            }">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Estado</label>
+                    <select class="form-select-dark" name="estado_id">
+                        <option value="4" ${
+                          profesional.estado_id === 4 ? "selected" : ""
+                        }>Activo</option>
+                        <option value="5" ${
+                          profesional.estado_id === 5 ? "selected" : ""
+                        }>Inactivo</option>
+                    </select>
+                </div>
+            `;
+
+        // Configurar la acción del formulario
+        document.getElementById(
+          "formEditarProfesional"
+        ).action = `/profesionales/editar/${profesionalId}`;
+
+        // Mostrar el modal correctamente
+        const modalElement = document.getElementById("modalEditarProfesional");
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar el formulario de edición", "error");
+      });
+  }
+
+  function crearProfesional() {
+    const formData = new FormData(document.getElementById("formProfesional"));
+    const data = Object.fromEntries(formData.entries());
+
+    const submitButton = document.querySelector(
+      '#formProfesional button[type="submit"]'
+    );
+    const originalText = submitButton.innerHTML;
+
+    // Mostrar loading
+    submitButton.innerHTML =
+      '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    submitButton.disabled = true;
+
+    fetch("/profesionales/crear", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showNotification(data.message, "success");
+          // Cerrar el modal
+          const modal = bootstrap.Modal.getInstance(
+            document.getElementById("modalProfesional")
+          );
+          modal.hide();
+          // Recargar la página después de un breve delay
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          throw new Error(data.error || "Error al crear el profesional");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification(
+          "Error al crear el profesional: " + error.message,
+          "error"
+        );
+        // Restaurar botón
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+      });
+  }
+
+  // Manejar el envío del formulario de edición
+  document.addEventListener("DOMContentLoaded", function () {
+    const formEditar = document.getElementById("formEditarProfesional");
+    if (formEditar) {
+      formEditar.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+
+        // Mostrar loading
+        submitButton.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+        submitButton.disabled = true;
+
+        fetch(this.action, {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Error en la respuesta del servidor");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              showNotification(data.message, "success");
+              // Cerrar el modal
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalEditarProfesional")
+              );
+              modal.hide();
+              // Recargar la página después de un breve delay
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              throw new Error(
+                data.error || "Error al actualizar el profesional"
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showNotification(
+              "Error al actualizar el profesional: " + error.message,
+              "error"
+            );
+            // Restaurar botón
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+          });
+      });
+    }
+  });
+</script>
+
+<style>
+  /* Estilos específicos para profesionales */
+  .profesional-card-modern:hover {
+    border-color: var(--primary-color);
+  }
+
+  .avatar-modern-sm {
+    background: linear-gradient(
+      135deg,
+      var(--primary-color),
+      var(--primary-dark)
+    );
+  }
+
+  /* Asegurar que los estilos generales se apliquen */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  /* Header específico para profesionales */
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 0;
+  }
+
+  /* Cards específicas de profesionales */
+  .profesional-card-modern {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .profesional-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+    border-color: var(--primary-color);
+  }
+
+  .avatar-modern-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    background: linear-gradient(
+      135deg,
+      var(--primary-color),
+      var(--primary-dark)
+    );
+    color: white;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  .avatar-modern-md {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .text-muted-dark {
+    color: var(--text-secondary) !important;
+  }
+
+  .profesional-info-modern .info-item-modern {
+    display: flex;
+    align-items: center;
+  }
+
+  .border-dark {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Badges específicos para profesionales */
+  .badge-modern {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-modern.badge-primary {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .badge-modern.badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .badge-modern.badge-secondary {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+
+  /* Estado Vacío */
+  .empty-state-dark {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-dark i {
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-dark h6 {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-dark p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  /* Estilos para el modal de detalles de profesionales */
+  .profesional-detalles .detalle-seccion {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+
+  .profesional-detalles .detalle-seccion:last-child {
+    border-bottom: none;
+  }
+
+  .seccion-titulo {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .detalle-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+  }
+
+  .detalle-item:last-child {
+    border-bottom: none;
+  }
+
+  .detalle-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .detalle-valor {
+    font-weight: 400;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  /* Grid más denso para profesionales */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+
+  /* Estilos para botones en cards de profesionales */
+  .btn-ver,
+  .btn-editar,
+  .btn-cambiar-estado {
+    transition: all 0.3s ease;
+    border: 2px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+  }
+
+  .btn-ver:hover,
+  .btn-editar:hover,
+  .btn-cambiar-estado:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+  }
+
+  /* Estilos específicos para inputs en modales de profesionales */
+  .modal-content {
+    background-color: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.25rem;
+  }
+
+  .modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 1.25rem;
+  }
+
+  .modal-title {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .form-label {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* Estilos para textareas en modales */
+  textarea.form-control-dark {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  /* Estilos para grupos de botones en cards */
+  .btn-group.btn-group-sm {
+    gap: 2px;
+  }
+
+  .btn-group .btn-modern {
+    margin: 0;
+  }
+
+  /* Estados de carga para botones */
+  .btn-modern:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  /* Estilos para selects en modales */
+  .form-select-dark {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+  }
+
+  /* Focus states mejorados */
+  .form-control-dark:focus,
+  .form-select-dark:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+  }
+
+  /* Estilos para time inputs */
+  input[type="time"].form-control-dark {
+    padding: 10px 14px;
+  }
+
+  /* Estilos para botones en modales */
+  .modal-footer .btn-modern {
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  /* Responsive para botones e inputs en profesionales */
+  @media (max-width: 576px) {
+    .btn-group.btn-group-sm {
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .btn-group .btn-modern.btn-xs {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .modal-footer {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .modal-footer .btn-modern {
+      width: 100%;
+      margin: 0;
+    }
+
+    .form-control-dark,
+    .form-select-dark {
+      font-size: 16px; /* Previene zoom en iOS */
+    }
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-modern.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-modern.btn-xs {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Form Controls Oscuros */
+  .form-control-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: var(--card-bg);
+  }
+
+  .form-control-dark::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .form-select-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-select-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-select-dark option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .input-group-text.bg-dark {
+    background: var(--sidebar-hover) !important;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* Responsive específico para profesionales */
+  @media (max-width: 576px) {
+    .page-title-wrapper {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 24px;
+    }
+
+    .profesional-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+
+    .detalle-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detalle-valor {
+      text-align: left;
+      margin-top: 0.1rem;
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 576px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 50%;
+    }
+
+    .profesional-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}

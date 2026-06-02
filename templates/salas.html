@@ -1,0 +1,1630 @@
+{% extends "base.html" %} {% block title %}Gestión de Salas{% endblock %} {%
+block content %}
+<!-- Contenedor para mensajes personalizados -->
+<div
+  id="custom-alerts-container"
+  class="position-fixed top-0 end-0 p-3"
+  style="z-index: 9999; max-width: 400px"
+></div>
+
+<!-- Modal de confirmación para cambiar estado -->
+<div
+  class="modal fade"
+  id="modalConfirmacionEstado"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar cambio de estado</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center">
+          <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+          <p id="confirmacionMensaje" class="mb-0">
+            ¿Está seguro de realizar esta acción?
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button
+          type="button"
+          class="btn-modern btn-outline"
+          data-bs-dismiss="modal"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-modern btn-primary"
+          id="btnConfirmarAccion"
+        >
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-door-open title-icon"></i>
+    <h2 class="page-title mb-0">Gestión de Salas</h2>
+  </div>
+  {% if 'admin' in session.user_roles %}
+  <button
+    class="btn-modern btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#modalSala"
+  >
+    <i class="fas fa-plus me-1"></i>Nueva Sala
+  </button>
+  {% endif %}
+</div>
+
+<!-- Filtros y búsqueda compactos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark"
+            ><i class="fas fa-search"></i
+          ></span>
+          <input
+            type="text"
+            class="form-control-dark form-control-sm"
+            id="searchInput"
+            placeholder="Buscar salas..."
+          />
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-2 justify-content-end">
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterEstado"
+            style="max-width: 150px"
+          >
+            <option value="todos">Todos</option>
+            <option value="activa">Activas</option>
+            <option value="inactiva">Inactivas</option>
+            <option value="mantenimiento">Mantenimiento</option>
+          </select>
+          <select
+            class="form-select-dark form-select-sm"
+            id="itemsPerPage"
+            style="max-width: 120px"
+          >
+            <option value="8">8 por página</option>
+            <option value="12" selected>12 por página</option>
+            <option value="16">16 por página</option>
+            <option value="20">20 por página</option>
+          </select>
+          <button
+            class="btn-modern btn-outline btn-sm"
+            id="btnResetFilters"
+            title="Restablecer filtros"
+          >
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de Cards Compactas -->
+<div class="row g-3" id="cardsContainer">
+  {% for sala in salas %}
+  <div
+    class="col-xxl-3 col-xl-4 col-lg-4 col-md-6 col-sm-6 fade-in sala-card"
+    data-estado="{{ sala.estado_nombre }}"
+    data-nombre="{{ sala.nombre }}"
+    data-sala-id="{{ sala.sala_id }}"
+  >
+    <div class="card-dark h-100 sala-card-modern">
+      <div class="card-body-dark p-3">
+        <!-- Header compacto -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center" style="min-width: 0; flex: 1">
+            <div
+              class="avatar-modern-sm me-2 flex-shrink-0"
+              style="background: linear-gradient(135deg, #8b5cf6, #7c3aed)"
+            >
+              <i
+                class="fas fa-door-closed"
+                style="color: white; font-size: 0.8rem"
+              ></i>
+            </div>
+            <div style="min-width: 0; flex: 1">
+              <h6 class="card-title-dark mb-0 text-truncate">
+                {{ sala.nombre }}
+              </h6>
+              <small class="text-muted-dark">ID: #{{ sala.sala_id }}</small>
+            </div>
+          </div>
+          <span
+            class="badge-modern badge-{{ 'success' if sala.estado_nombre == 'activa' else 'warning' if sala.estado_nombre == 'mantenimiento' else 'secondary' }} flex-shrink-0"
+          >
+            {{ sala.estado_nombre|title }}
+          </span>
+        </div>
+
+        <!-- Información mínima de la sala -->
+        <div class="sala-info-modern mb-2">
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-users me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark"
+              >Capacidad: {{ sala.capacidad }} personas</small
+            >
+          </div>
+          {% if sala.descripcion %}
+          <div class="info-item-modern">
+            <i
+              class="fas fa-info-circle me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark text-truncate d-block"
+              >{{ sala.descripcion }}</small
+            >
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Acciones compactas -->
+        <div class="d-flex justify-content-between pt-2 border-top border-dark">
+          <button
+            class="btn-modern btn-outline btn-xs btn-ver"
+            data-sala-id="{{ sala.sala_id }}"
+            title="Ver detalles"
+          >
+            <i class="fas fa-eye"></i>
+          </button>
+          {% if 'admin' in session.user_roles %}
+          <div class="btn-group btn-group-sm">
+            <button
+              class="btn-modern btn-outline btn-xs btn-editar"
+              data-sala-id="{{ sala.sala_id }}"
+              title="Editar"
+            >
+              <i class="fas fa-edit"></i>
+            </button>
+            <button
+              class="btn-modern btn-outline btn-xs btn-cambiar-estado"
+              data-sala-id="{{ sala.sala_id }}"
+              data-estado-actual="{{ sala.estado_nombre }}"
+              title="Cambiar estado"
+            >
+              <i class="fas fa-sync-alt"></i>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card-dark text-center py-4">
+      <div class="card-body-dark">
+        <div class="empty-state-dark">
+          <i class="fas fa-door-closed fa-2x mb-3"></i>
+          <h6>No hay salas registradas</h6>
+          <p class="mb-2">Comience agregando una nueva sala.</p>
+          {% if 'admin' in session.user_roles %}
+          <button
+            class="btn-modern btn-primary mt-1"
+            data-bs-toggle="modal"
+            data-bs-target="#modalSala"
+          >
+            <i class="fas fa-plus me-1"></i>Agregar Primera Sala
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Contador de salas y paginación -->
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <div class="text-muted-dark">
+    Mostrando
+    <span id="contadorSalas">0</span>
+    de <span id="totalSalas">{{ salas|length }}</span> sala(s)
+  </div>
+
+  <!-- Paginación del lado del cliente -->
+  <nav aria-label="Paginación de salas" id="paginationContainer">
+    <ul class="pagination pagination-sm mb-0" id="paginationControls">
+      <!-- Los controles de paginación se generarán dinámicamente con JavaScript -->
+    </ul>
+  </nav>
+</div>
+
+<!-- Modal para nueva sala -->
+<div class="modal fade" id="modalSala" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-door-open me-2"></i>Nueva Sala
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form id="formSala">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Nombre *</label>
+                <input
+                  type="text"
+                  class="form-control-dark"
+                  name="nombre"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Capacidad *</label>
+                <input
+                  type="number"
+                  class="form-control-dark"
+                  name="capacidad"
+                  min="1"
+                  value="1"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea
+              class="form-control-dark"
+              name="descripcion"
+              rows="3"
+              placeholder="Descripción de la sala, equipamiento, características especiales..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Guardar Sala
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles -->
+<div class="modal fade" id="modalVerSala" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-door-open me-2"></i>Detalles de la Sala
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body p-0" id="detallesSala">
+        <!-- Los detalles se cargarán aquí via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para editar sala -->
+<div class="modal fade" id="modalEditarSala" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Sala</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form id="formEditarSala">
+        <div class="modal-body" id="formEditarSalaBody">
+          <!-- El formulario se cargará aquí via AJAX -->
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Actualizar Sala
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para cambiar estado de sala -->
+<div class="modal fade" id="modalCambiarEstadoSala" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cambiar Estado</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-grid gap-2">
+          <button
+            type="button"
+            class="btn-modern btn-success btn-estado"
+            data-estado="activa"
+          >
+            <i class="fas fa-check me-2"></i>Activar
+          </button>
+          <button
+            type="button"
+            class="btn-modern btn-warning btn-estado"
+            data-estado="mantenimiento"
+          >
+            <i class="fas fa-tools me-2"></i>Mantenimiento
+          </button>
+          <button
+            type="button"
+            class="btn-modern btn-secondary btn-estado"
+            data-estado="inactiva"
+          >
+            <i class="fas fa-times me-2"></i>Desactivar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // Variables globales para manejar la paginación
+  let currentPage = 1;
+  let itemsPerPage = 12;
+  let filteredSalas = [];
+
+  // Variables globales para manejar la confirmación
+  let salaEstadoActual = null;
+  let botonEstadoActual = null;
+
+  // Función mejorada para mostrar notificaciones personalizadas
+  function showNotification(message, type) {
+    const container = document.getElementById("custom-alerts-container");
+    if (!container) {
+      console.error("No se encontró el contenedor de alertas");
+      return;
+    }
+
+    // Crear elemento de alerta
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${
+      type === "error" ? "danger" : "success"
+    } alert-dismissible fade show custom-alert mb-2`;
+    alertDiv.style.maxWidth = "350px";
+    alertDiv.style.width = "100%";
+    alertDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    alertDiv.style.border = "none";
+    alertDiv.style.borderRadius = "8px";
+    alertDiv.style.fontSize = "0.875rem";
+
+    // Icono según el tipo
+    const icon = type === "error" ? "exclamation-triangle" : "check-circle";
+    const title = type === "error" ? "Error" : "Éxito";
+
+    alertDiv.innerHTML = `
+      <div class="d-flex align-items-start">
+        <i class="fas fa-${icon} mt-1 me-2 ${
+      type === "error" ? "text-danger" : "text-success"
+    }" style="flex-shrink: 0;"></i>
+        <div class="flex-grow-1" style="min-width: 0;">
+          <strong class="d-block mb-1">${title}</strong>
+          <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+      </div>
+    `;
+
+    // Agregar al contenedor (al inicio para que las nuevas aparezcan arriba)
+    container.insertBefore(alertDiv, container.firstChild);
+
+    // Auto-eliminar después de 5 segundos
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+      }
+    }, 5000);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Inicializar la paginación
+    initPagination();
+
+    // Manejar el botón de ver detalles
+    document.querySelectorAll(".btn-ver").forEach((button) => {
+      button.addEventListener("click", function () {
+        const salaId = this.getAttribute("data-sala-id");
+        cargarDetallesSala(salaId);
+      });
+    });
+
+    // Manejar el botón de editar
+    document.querySelectorAll(".btn-editar").forEach((button) => {
+      button.addEventListener("click", function () {
+        const salaId = this.getAttribute("data-sala-id");
+        cargarFormularioEdicion(salaId);
+      });
+    });
+
+    // Manejar el botón de cambiar estado
+    document.querySelectorAll(".btn-cambiar-estado").forEach((button) => {
+      button.addEventListener("click", function () {
+        const salaId = this.getAttribute("data-sala-id");
+
+        // Guardar los datos para usar en la confirmación
+        salaEstadoActual = salaId;
+        botonEstadoActual = this;
+
+        // Mostrar modal de selección de estado
+        const modal = new bootstrap.Modal(
+          document.getElementById("modalCambiarEstadoSala")
+        );
+        modal.show();
+      });
+    });
+
+    // Configurar los botones de estado en el modal
+    document.querySelectorAll(".btn-estado").forEach((button) => {
+      button.addEventListener("click", function () {
+        const nuevoEstado = this.getAttribute("data-estado");
+        cambiarEstadoSala(salaEstadoActual, nuevoEstado, botonEstadoActual);
+
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(
+          document.getElementById("modalCambiarEstadoSala")
+        );
+        modal.hide();
+      });
+    });
+
+    // Filtros y búsqueda
+    const searchInput = document.getElementById("searchInput");
+    const filterEstado = document.getElementById("filterEstado");
+    const itemsPerPageSelect = document.getElementById("itemsPerPage");
+    const btnResetFilters = document.getElementById("btnResetFilters");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        filtrarSalas();
+        updatePagination();
+      });
+    }
+
+    if (filterEstado) {
+      filterEstado.addEventListener("change", function () {
+        filtrarSalas();
+        updatePagination();
+      });
+    }
+
+    if (itemsPerPageSelect) {
+      itemsPerPageSelect.addEventListener("change", function () {
+        itemsPerPage = parseInt(this.value);
+        currentPage = 1;
+        updatePagination();
+      });
+    }
+
+    if (btnResetFilters) {
+      btnResetFilters.addEventListener("click", resetearFiltros);
+    }
+
+    // Manejar el formulario de creación
+    const formSala = document.getElementById("formSala");
+    if (formSala) {
+      formSala.addEventListener("submit", function (e) {
+        e.preventDefault();
+        crearSala();
+      });
+    }
+
+    // Actualizar contador inicial
+    updateCounter();
+  });
+
+  // Función para inicializar la paginación
+  function initPagination() {
+    // Obtener todas las salas
+    const allSalas = Array.from(document.querySelectorAll(".sala-card"));
+
+    // Inicializar la lista filtrada con todas las salas
+    filteredSalas = allSalas;
+
+    // Actualizar la paginación
+    updatePagination();
+  }
+
+  // Función para actualizar la paginación
+  function updatePagination() {
+    const totalSalas = filteredSalas.length;
+    const totalPages = Math.ceil(totalSalas / itemsPerPage);
+
+    // Asegurarse de que la página actual sea válida
+    if (currentPage > totalPages && totalPages > 0) {
+      currentPage = totalPages;
+    } else if (totalPages === 0) {
+      currentPage = 1;
+    }
+
+    // Ocultar todas las salas primero
+    document.querySelectorAll(".sala-card").forEach((card) => {
+      card.style.display = "none";
+    });
+
+    // Mostrar solo las salas de la página actual
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const salasToShow = filteredSalas.slice(startIndex, endIndex);
+
+    salasToShow.forEach((card) => {
+      card.style.display = "block";
+    });
+
+    // Actualizar contador
+    updateCounter();
+
+    // Generar controles de paginación
+    generatePaginationControls(totalPages);
+  }
+
+  // Función para generar los controles de paginación
+  function generatePaginationControls(totalPages) {
+    const paginationContainer = document.getElementById("paginationControls");
+
+    if (totalPages <= 1) {
+      paginationContainer.innerHTML = "";
+      document.getElementById("paginationContainer").style.display = "none";
+      return;
+    }
+
+    document.getElementById("paginationContainer").style.display = "block";
+
+    let paginationHTML = "";
+
+    // Botón anterior
+    paginationHTML += `
+      <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+        <a class="page-link" href="#" onclick="changePage(${
+          currentPage - 1
+        }); return false;">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+    `;
+
+    // Páginas
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    // Ajustar si estamos cerca del final
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    // Primera página y puntos suspensivos si es necesario
+    if (startPage > 1) {
+      paginationHTML += `
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="changePage(1); return false;">1</a>
+        </li>
+      `;
+      if (startPage > 2) {
+        paginationHTML += `
+          <li class="page-item disabled">
+            <span class="page-link">...</span>
+          </li>
+        `;
+      }
+    }
+
+    // Páginas visibles
+    for (let i = startPage; i <= endPage; i++) {
+      paginationHTML += `
+        <li class="page-item ${i === currentPage ? "active" : ""}">
+          <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+        </li>
+      `;
+    }
+
+    // Última página y puntos suspensivos si es necesario
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        paginationHTML += `
+          <li class="page-item disabled">
+            <span class="page-link">...</span>
+          </li>
+        `;
+      }
+      paginationHTML += `
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="changePage(${totalPages}); return false;">${totalPages}</a>
+        </li>
+      `;
+    }
+
+    // Botón siguiente
+    paginationHTML += `
+      <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+        <a class="page-link" href="#" onclick="changePage(${
+          currentPage + 1
+        }); return false;">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    `;
+
+    paginationContainer.innerHTML = paginationHTML;
+  }
+
+  // Función para cambiar de página
+  function changePage(page) {
+    currentPage = page;
+    updatePagination();
+
+    // Scroll suave hacia arriba
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  // Función para actualizar el contador
+  function updateCounter() {
+    const totalSalas = filteredSalas.length;
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, totalSalas);
+
+    document.getElementById("contadorSalas").textContent =
+      totalSalas > 0 ? `${startIndex}-${endIndex}` : "0";
+    document.getElementById("totalSalas").textContent = totalSalas;
+  }
+
+  function cambiarEstadoSala(salaId, nuevoEstado, button) {
+    // Mostrar indicador de carga
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+
+    fetch(`/salas/cambiar-estado/${salaId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ nuevo_estado: nuevoEstado }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showNotification(data.message, "success");
+          // Recargar después de 1.5 segundos
+          setTimeout(() => {
+            location.reload();
+          }, 1500);
+        } else {
+          throw new Error(data.error || "Error desconocido");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification(
+          "Error al cambiar el estado de la sala: " + error.message,
+          "error"
+        );
+        // Restaurar botón
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+      });
+  }
+
+  function filtrarSalas() {
+    const searchTerm = document
+      .getElementById("searchInput")
+      .value.toLowerCase();
+    const estadoFiltro = document.getElementById("filterEstado").value;
+
+    // Obtener todas las salas
+    const allSalas = Array.from(document.querySelectorAll(".sala-card"));
+
+    // Filtrar salas
+    filteredSalas = allSalas.filter((card) => {
+      const nombre = card.getAttribute("data-nombre").toLowerCase();
+      const estado = card.getAttribute("data-estado");
+
+      const coincideNombre = nombre.includes(searchTerm);
+      const coincideEstado =
+        estadoFiltro === "todos" || estado === estadoFiltro;
+
+      return coincideNombre && coincideEstado;
+    });
+
+    // Reiniciar a la primera página después de filtrar
+    currentPage = 1;
+  }
+
+  function resetearFiltros() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("filterEstado").value = "todos";
+    document.getElementById("itemsPerPage").value = "12";
+    itemsPerPage = 12;
+    currentPage = 1;
+    filtrarSalas();
+    updatePagination();
+  }
+
+  function cargarDetallesSala(salaId) {
+    fetch(`/api/salas/${salaId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((sala) => {
+        const modalBody = document.getElementById("detallesSala");
+        modalBody.innerHTML = `
+          <div class="sala-detalles">
+            <!-- Header con información principal -->
+            <div class="sala-header p-4" style="background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: white;">
+              <div class="d-flex align-items-center">
+                <div class="avatar-modern-md me-3" style="background: rgba(255, 255, 255, 0.2);">
+                  <i class="fas fa-door-closed" style="color: white; font-size: 1.5rem;"></i>
+                </div>
+                <div>
+                  <h4 class="mb-1">${sala.nombre}</h4>
+                  <p class="mb-0 opacity-75">ID: #${sala.sala_id}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Cuerpo de detalles -->
+            <div class="p-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-info-circle me-2"></i>Información General
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Capacidad:</span>
+                      <span class="detalle-valor">${
+                        sala.capacidad
+                      } persona(s)</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Estado:</span>
+                      <span class="detalle-valor">
+                        <span class="badge-modern badge-${
+                          sala.estado_nombre === "activa"
+                            ? "success"
+                            : sala.estado_nombre === "mantenimiento"
+                            ? "warning"
+                            : "secondary"
+                        }">
+                          ${sala.estado_nombre}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-calendar-alt me-2"></i>Información Adicional
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Fecha de creación:</span>
+                      <span class="detalle-valor">${
+                        sala.created_at
+                          ? new Date(sala.created_at).toLocaleDateString()
+                          : "N/A"
+                      }</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              ${
+                sala.descripcion
+                  ? `
+              <div class="detalle-seccion">
+                <h6 class="seccion-titulo mb-3">
+                  <i class="fas fa-align-left me-2"></i>Descripción
+                </h6>
+                <div class="card-dark">
+                  <div class="card-body-dark py-3">
+                    <p class="mb-0">${sala.descripcion}</p>
+                  </div>
+                </div>
+              </div>
+              `
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+
+        // Mostrar el modal correctamente
+        const modalElement = document.getElementById("modalVerSala");
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar los detalles de la sala", "error");
+      });
+  }
+
+  function cargarFormularioEdicion(salaId) {
+    fetch(`/api/salas/${salaId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((sala) => {
+        const modalBody = document.getElementById("formEditarSalaBody");
+
+        modalBody.innerHTML = `
+                <input type="hidden" name="sala_id" value="${sala.sala_id}">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <input type="text" class="form-control-dark" name="nombre" value="${
+                              sala.nombre
+                            }" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Capacidad *</label>
+                            <input type="number" class="form-control-dark" name="capacidad" value="${
+                              sala.capacidad
+                            }" min="1" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <textarea class="form-control-dark" name="descripcion" rows="3">${
+                      sala.descripcion || ""
+                    }</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Estado</label>
+                    <select class="form-select-dark" name="estado_id">
+                        <option value="6" ${
+                          sala.estado_id === 6 ? "selected" : ""
+                        }>Activa</option>
+                        <option value="7" ${
+                          sala.estado_id === 7 ? "selected" : ""
+                        }>Inactiva</option>
+                        <option value="8" ${
+                          sala.estado_id === 8 ? "selected" : ""
+                        }>Mantenimiento</option>
+                    </select>
+                </div>
+            `;
+
+        // Configurar la acción del formulario
+        document.getElementById(
+          "formEditarSala"
+        ).action = `/salas/editar/${salaId}`;
+
+        // Mostrar el modal correctamente
+        const modalElement = document.getElementById("modalEditarSala");
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar el formulario de edición", "error");
+      });
+  }
+
+  function crearSala() {
+    const formData = new FormData(document.getElementById("formSala"));
+    const data = Object.fromEntries(formData.entries());
+
+    const submitButton = document.querySelector(
+      '#formSala button[type="submit"]'
+    );
+    const originalText = submitButton.innerHTML;
+
+    // Mostrar loading
+    submitButton.innerHTML =
+      '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    submitButton.disabled = true;
+
+    fetch("/salas/crear", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showNotification(data.message, "success");
+          // Cerrar el modal
+          const modal = bootstrap.Modal.getInstance(
+            document.getElementById("modalSala")
+          );
+          modal.hide();
+          // Recargar la página después de un breve delay
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          throw new Error(data.error || "Error al crear la sala");
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al crear la sala: " + error.message, "error");
+        // Restaurar botón
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+      });
+  }
+
+  // Manejar el envío del formulario de edición
+  document.addEventListener("DOMContentLoaded", function () {
+    const formEditar = document.getElementById("formEditarSala");
+    if (formEditar) {
+      formEditar.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+
+        // Mostrar loading
+        submitButton.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+        submitButton.disabled = true;
+
+        fetch(this.action, {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Error en la respuesta del servidor");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              showNotification(data.message, "success");
+              // Cerrar el modal
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalEditarSala")
+              );
+              modal.hide();
+              // Recargar la página después de un breve delay
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              throw new Error(data.error || "Error al actualizar la sala");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showNotification(
+              "Error al actualizar la sala: " + error.message,
+              "error"
+            );
+            // Restaurar botón
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+          });
+      });
+    }
+  });
+</script>
+
+<style>
+  /* Estilos específicos para salas */
+  .sala-card-modern:hover {
+    border-color: #8b5cf6;
+  }
+
+  .avatar-modern-sm {
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: white;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  /* Asegurar que los estilos generales se apliquen */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  /* Botones de estado específicos */
+  .btn-modern.btn-success {
+    background: #10b981;
+    color: white;
+  }
+
+  .btn-modern.btn-warning {
+    background: #f59e0b;
+    color: white;
+  }
+
+  .btn-modern.btn-secondary {
+    background: #6b7280;
+    color: white;
+  }
+
+  /* Header específico para salas */
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 0;
+  }
+
+  /* Cards específicas de salas */
+  .sala-card-modern {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .sala-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+    border-color: #8b5cf6;
+  }
+
+  .avatar-modern-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  .avatar-modern-md {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .text-muted-dark {
+    color: var(--text-secondary) !important;
+  }
+
+  .sala-info-modern .info-item-modern {
+    display: flex;
+    align-items: center;
+  }
+
+  .border-dark {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Badges específicos para salas */
+  .badge-modern {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-modern.badge-primary {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .badge-modern.badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .badge-modern.badge-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .badge-modern.badge-secondary {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+
+  /* Estado Vacío para salas */
+  .empty-state-dark {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-dark i {
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-dark h6 {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-dark p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  /* Estilos para el modal de detalles de salas */
+  .sala-detalles .detalle-seccion {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+
+  .sala-detalles .detalle-seccion:last-child {
+    border-bottom: none;
+  }
+
+  .seccion-titulo {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .detalle-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+  }
+
+  .detalle-item:last-child {
+    border-bottom: none;
+  }
+
+  .detalle-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .detalle-valor {
+    font-weight: 400;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  /* Grid más denso para salas */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+
+  /* Responsive específico para salas */
+  @media (max-width: 576px) {
+    .page-title-wrapper {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 24px;
+    }
+
+    .sala-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+
+    .detalle-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detalle-valor {
+      text-align: left;
+      margin-top: 0.1rem;
+    }
+  }
+
+  /* Estilos para botones en cards de salas */
+  .btn-ver,
+  .btn-editar,
+  .btn-cambiar-estado {
+    transition: all 0.3s ease;
+    border: 2px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+  }
+
+  .btn-ver:hover,
+  .btn-editar:hover,
+  .btn-cambiar-estado:hover {
+    border-color: #8b5cf6;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
+    transform: translateY(-1px);
+  }
+
+  /* Estilos específicos para inputs en modales de salas */
+  .modal-content {
+    background-color: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.25rem;
+  }
+
+  .modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 1.25rem;
+  }
+
+  .modal-title {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .form-label {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* Estilos para textareas en modales de salas */
+  textarea.form-control-dark {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  /* Estilos para grupos de botones en cards de salas */
+  .btn-group.btn-group-sm {
+    gap: 2px;
+  }
+
+  .btn-group .btn-modern {
+    margin: 0;
+  }
+
+  /* Estados de carga para botones */
+  .btn-modern:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  /* Estilos para selects en modales de salas */
+  .form-select-dark {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+  }
+
+  /* Focus states mejorados para salas */
+  .form-control-dark:focus,
+  .form-select-dark:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    outline: none;
+  }
+
+  /* Estilos para number inputs en capacidad */
+  input[type="number"].form-control-dark {
+    padding: 10px 14px;
+  }
+
+  /* Estilos para botones en modales de salas */
+  .modal-footer .btn-modern {
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  /* Estilos para botones de estado en modal específico */
+  .btn-estado {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    justify-content: center;
+  }
+
+  .btn-estado:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Responsive para botones e inputs en salas */
+  @media (max-width: 576px) {
+    .btn-group.btn-group-sm {
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .btn-group .btn-modern.btn-xs {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .modal-footer {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .modal-footer .btn-modern {
+      width: 100%;
+      margin: 0;
+    }
+
+    .form-control-dark,
+    .form-select-dark {
+      font-size: 16px; /* Previene zoom en iOS */
+    }
+
+    /* Modal de cambiar estado responsive */
+    .modal-sm .modal-body {
+      padding: 1rem;
+    }
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-modern.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-modern.btn-xs {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Form Controls Oscuros */
+  .form-control-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: var(--card-bg);
+  }
+
+  .form-control-dark::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .form-select-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-select-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-select-dark option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .input-group-text.bg-dark {
+    background: var(--sidebar-hover) !important;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* Responsive */
+  @media (max-width: 576px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 50%;
+    }
+
+    .sala-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}

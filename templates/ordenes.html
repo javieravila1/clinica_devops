@@ -1,0 +1,1048 @@
+{% extends "base.html" %} 
+{% block title %}Órdenes Médicas{% endblock %} 
+{% block content %}
+
+<!-- Contenedor para mensajes personalizados -->
+<div id="custom-alerts-container" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; max-width: 400px"></div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-file-medical title-icon"></i>
+    <h2 class="page-title mb-0">Órdenes Médicas</h2>
+  </div>
+  {% if 'admin' in session.user_roles or 'profesional' in session.user_roles %}
+  <button class="btn-modern btn-primary" data-bs-toggle="modal" data-bs-target="#modalOrden">
+    <i class="fas fa-plus me-1"></i>Nueva Orden
+  </button>
+  {% endif %}
+</div>
+
+<!-- Filtros y búsqueda compactos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark"><i class="fas fa-search"></i></span>
+          <input type="text" class="form-control-dark form-control-sm" id="searchInput" placeholder="Buscar por paciente o descripción..." />
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-2 justify-content-end">
+          <select class="form-select-dark form-select-sm" id="filterTipo" style="max-width: 180px">
+            <option value="todos">Todos los tipos</option>
+            <option value="medicamento">Medicamentos</option>
+            <option value="procedimiento">Procedimientos</option>
+            <option value="examen">Exámenes</option>
+            <option value="terapia">Terapias</option>
+          </select>
+          <select class="form-select-dark form-select-sm" id="filterEstado" style="max-width: 150px">
+            <option value="todos">Todos</option>
+            <option value="activo">Activos</option>
+            <option value="completado">Completados</option>
+            <option value="cancelado">Cancelados</option>
+          </select>
+          <button class="btn-modern btn-outline btn-sm" id="btnResetFilters" title="Restablecer filtros">
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de Cards Compactas para Órdenes -->
+<div class="row g-3" id="cardsContainer">
+  {% for orden in ordenes %}
+  <div class="col-xxl-4 col-xl-4 col-lg-6 col-md-6 col-sm-6 fade-in orden-card" 
+       data-tipo="{{ orden.tipo_orden }}" 
+       data-estado="{{ orden.estado_nombre }}"
+       data-paciente="{{ orden.paciente_nombre }} {{ orden.paciente_apellido }}"
+       data-descripcion="{{ orden.descripcion }}">
+    <div class="card-dark h-100 orden-card-modern">
+      <div class="card-body-dark p-3">
+        <!-- Header compacto -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center" style="min-width: 0; flex: 1">
+            <div class="avatar-modern-sm me-2 flex-shrink-0" style="background: linear-gradient(135deg, 
+              {% if orden.tipo_orden == 'medicamento' %}#4CAF50, #388E3C
+              {% elif orden.tipo_orden == 'procedimiento' %}#2196F3, #1976D2
+              {% elif orden.tipo_orden == 'examen' %}#FF9800, #F57C00
+              {% else %}#9C27B0, #7B1FA2{% endif %});">
+              {% if orden.tipo_orden == 'medicamento' %}<i class="fas fa-pills"></i>
+              {% elif orden.tipo_orden == 'procedimiento' %}<i class="fas fa-procedures"></i>
+              {% elif orden.tipo_orden == 'examen' %}<i class="fas fa-flask"></i>
+              {% else %}<i class="fas fa-heartbeat"></i>{% endif %}
+            </div>
+            <div style="min-width: 0; flex: 1">
+              <h6 class="card-title-dark mb-0 text-truncate">{{ orden.paciente_nombre }} {{ orden.paciente_apellido }}</h6>
+              <small class="text-muted-dark">Orden #{{ orden.orden_id }}</small>
+            </div>
+          </div>
+          <span class="badge-tipo-{{ orden.tipo_orden }} flex-shrink-0">
+            {{ orden.tipo_orden | capitalize }}
+          </span>
+        </div>
+
+        <!-- Información de la orden -->
+        <div class="orden-info-modern mb-2">
+          <div class="info-item-modern mb-1">
+            <span class="info-label-modern">
+              <i class="fas fa-user-md me-1"></i>Profesional:
+            </span>
+            <span class="info-value-modern text-truncate">{{ orden.profesional_nombre }} {{ orden.profesional_apellido }}</span>
+          </div>
+          {% if orden.medicamento_nombre and orden.medicamento_nombre != 'N/A' %}
+          <div class="info-item-modern mb-1">
+            <span class="info-label-modern">
+              <i class="fas fa-pills me-1"></i>Medicamento:
+            </span>
+            <span class="info-value-modern text-truncate">{{ orden.medicamento_nombre }}</span>
+          </div>
+          {% endif %}
+          <div class="info-item-modern mb-1">
+            <span class="info-label-modern">
+              <i class="fas fa-calendar me-1"></i>Inicio:
+            </span>
+            <span class="info-value-modern">{{ orden.fecha_inicio.strftime('%d/%m/%Y') if orden.fecha_inicio else 'N/A' }}</span>
+          </div>
+          <div class="info-item-modern">
+            <span class="info-label-modern">
+              <i class="fas fa-info-circle me-1"></i>Estado:
+            </span>
+            <span class="badge-{{ orden.estado_nombre }}">{{ orden.estado_nombre | capitalize }}</span>
+          </div>
+        </div>
+
+        <!-- Descripción preview -->
+        <div class="descripcion-preview mb-2">
+          <div class="card-dark border-0">
+            <div class="card-body-dark p-2">
+              <small class="text-muted-dark d-block mb-1">
+                <i class="fas fa-file-alt me-1"></i>Descripción:
+              </small>
+              <p class="mb-0 text-truncate-2">{{ orden.descripcion[:100] }}{% if orden.descripcion|length > 100 %}...{% endif %}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones compactas -->
+        <div class="d-flex justify-content-between pt-2 border-top border-dark">
+          <button class="btn-modern btn-xs btn-outline btn-ver-orden" onclick="verOrden({{ orden.orden_id }})" title="Ver detalles">
+            <i class="fas fa-eye me-1"></i>Ver
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card-dark text-center py-4">
+      <div class="card-body-dark">
+        <div class="empty-state-dark">
+          <i class="fas fa-file-medical fa-2x mb-3"></i>
+          <h6>No hay órdenes médicas registradas</h6>
+          <p class="mb-2">Comience registrando una nueva orden médica.</p>
+          {% if 'admin' in session.user_roles or 'profesional' in session.user_roles %}
+          <button class="btn-modern btn-primary" data-bs-toggle="modal" data-bs-target="#modalOrden">
+            <i class="fas fa-plus me-1"></i>Nueva Orden
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Contador de órdenes -->
+<div class="mt-3 text-end">
+  <small class="text-muted-dark">
+    Mostrando <span id="contadorOrdenes">{{ ordenes|length }}</span> orden(es)
+  </small>
+</div>
+
+<!-- Modal para crear/editar orden -->
+<div class="modal fade" id="modalOrden" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalOrdenTitle"><i class="fas fa-file-medical me-2"></i>Nueva Orden Médica</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formOrden" method="POST" action="{{ url_for('ordenes.crear_orden') }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label-dark">Paciente *</label>
+              <select class="form-select-dark" name="paciente_id" required>
+                <option value="">Seleccione un paciente</option>
+                {% for paciente in pacientes %}
+                <option value="{{ paciente.paciente_id }}">
+                  {{ paciente.nombre }} {{ paciente.apellido }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Profesional *</label>
+              <select class="form-select-dark" name="profesional_id" required>
+                <option value="">Seleccione un profesional</option>
+                {% for prof in profesionales %}
+                <option value="{{ prof.profesional_id }}">
+                  {{ prof.nombre }} {{ prof.apellido }} - {{ prof.especialidad }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Tipo de Orden *</label>
+              <select class="form-select-dark" name="tipo_orden" id="tipoOrden" required onchange="toggleMedicamentoFields()">
+                <option value="">Seleccione tipo</option>
+                <option value="medicamento">Medicamento</option>
+                <option value="procedimiento">Procedimiento</option>
+                <option value="examen">Examen</option>
+                <option value="terapia">Terapia</option>
+              </select>
+            </div>
+            <div class="col-md-6" id="medicamentoField" style="display: none;">
+              <label class="form-label-dark">Medicamento</label>
+              <select class="form-select-dark" name="medicamento_id">
+                <option value="">Seleccione medicamento</option>
+                {% for med in medicamentos %}
+                <option value="{{ med.medicamento_id }}">
+                  {{ med.nombre_comercial }} - {{ med.nombre_generico }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label-dark">Descripción *</label>
+              <textarea class="form-control-dark" name="descripcion" rows="3" required></textarea>
+            </div>
+            <div class="col-md-4" id="dosisField" style="display: none;">
+              <label class="form-label-dark">Dosis</label>
+              <input type="text" class="form-control-dark" name="dosis" placeholder="Ej: 500mg" />
+            </div>
+            <div class="col-md-4" id="frecuenciaField" style="display: none;">
+              <label class="form-label-dark">Frecuencia</label>
+              <input type="text" class="form-control-dark" name="frecuencia" placeholder="Ej: Cada 8 horas" />
+            </div>
+            <div class="col-md-4" id="duracionField" style="display: none;">
+              <label class="form-label-dark">Duración</label>
+              <input type="text" class="form-control-dark" name="duracion" placeholder="Ej: 7 días" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Fecha de Inicio *</label>
+              <input type="date" class="form-control-dark" name="fecha_inicio" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Fecha de Fin</label>
+              <input type="date" class="form-control-dark" name="fecha_fin" />
+            </div>
+            <div class="col-12">
+              <label class="form-label-dark">Observaciones</label>
+              <textarea class="form-control-dark" name="observaciones" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-modern btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-modern btn-primary">Guardar Orden</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles -->
+<div class="modal fade" id="modalVerOrden" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-file-medical me-2"></i>Detalles de Orden Médica</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0" id="detallesOrden">
+        <!-- Contenido dinámico -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Función para mostrar notificaciones personalizadas
+function showNotification(message, type) {
+  const container = document.getElementById('custom-alerts-container');
+  if (!container) {
+    console.error('No se encontró el contenedor de alertas');
+    return;
+  }
+
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show custom-alert mb-2`;
+  alertDiv.style.maxWidth = '350px';
+  alertDiv.style.width = '100%';
+  alertDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+  alertDiv.style.border = 'none';
+  alertDiv.style.borderRadius = '8px';
+  alertDiv.style.fontSize = '0.875rem';
+
+  const icon = type === 'error' ? 'exclamation-triangle' : 'check-circle';
+  const title = type === 'error' ? 'Error' : 'Éxito';
+
+  alertDiv.innerHTML = `
+    <div class="d-flex align-items-start">
+      <i class="fas fa-${icon} mt-1 me-2 ${type === 'error' ? 'text-danger' : 'text-success'}" style="flex-shrink: 0;"></i>
+      <div class="flex-grow-1" style="min-width: 0;">
+        <strong class="d-block mb-1">${title}</strong>
+        <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+      </div>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+    </div>
+  `;
+
+  container.insertBefore(alertDiv, container.firstChild);
+
+  setTimeout(() => {
+    if (alertDiv.parentNode) {
+      const bsAlert = new bootstrap.Alert(alertDiv);
+      bsAlert.close();
+    }
+  }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Filtros y búsqueda
+  const searchInput = document.getElementById('searchInput');
+  const filterTipo = document.getElementById('filterTipo');
+  const filterEstado = document.getElementById('filterEstado');
+  const btnResetFilters = document.getElementById('btnResetFilters');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', filtrarOrdenes);
+  }
+
+  if (filterTipo) {
+    filterTipo.addEventListener('change', filtrarOrdenes);
+  }
+
+  if (filterEstado) {
+    filterEstado.addEventListener('change', filtrarOrdenes);
+  }
+
+  if (btnResetFilters) {
+    btnResetFilters.addEventListener('click', resetearFiltros);
+  }
+});
+
+function filtrarOrdenes() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const tipoFiltro = document.getElementById('filterTipo').value;
+  const estadoFiltro = document.getElementById('filterEstado').value;
+  let contador = 0;
+
+  document.querySelectorAll('.orden-card').forEach(card => {
+    const paciente = card.getAttribute('data-paciente').toLowerCase();
+    const descripcion = card.getAttribute('data-descripcion').toLowerCase();
+    const tipo = card.getAttribute('data-tipo');
+    const estado = card.getAttribute('data-estado');
+
+    const coincideBusqueda = paciente.includes(searchTerm) || descripcion.includes(searchTerm);
+    const coincideTipo = tipoFiltro === 'todos' || tipo === tipoFiltro;
+    const coincideEstado = estadoFiltro === 'todos' || estado === estadoFiltro;
+
+    if (coincideBusqueda && coincideTipo && coincideEstado) {
+      card.style.display = 'block';
+      contador++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  // Actualizar contador
+  document.getElementById('contadorOrdenes').textContent = contador;
+}
+
+function resetearFiltros() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterTipo').value = 'todos';
+  document.getElementById('filterEstado').value = 'todos';
+  filtrarOrdenes();
+}
+
+function toggleMedicamentoFields() {
+  const tipo = document.getElementById('tipoOrden').value;
+  const medicamentoField = document.getElementById('medicamentoField');
+  const dosisField = document.getElementById('dosisField');
+  const frecuenciaField = document.getElementById('frecuenciaField');
+  const duracionField = document.getElementById('duracionField');
+  
+  if (tipo === 'medicamento') {
+    medicamentoField.style.display = 'block';
+    dosisField.style.display = 'block';
+    frecuenciaField.style.display = 'block';
+    duracionField.style.display = 'block';
+  } else {
+    medicamentoField.style.display = 'none';
+    dosisField.style.display = 'none';
+    frecuenciaField.style.display = 'none';
+    duracionField.style.display = 'none';
+  }
+}
+
+function verOrden(ordenId) {
+  fetch(`/api/ordenes/${ordenId}`)
+    .then(response => response.json())
+    .then(orden => {
+      const modalBody = document.getElementById('detallesOrden');
+      modalBody.innerHTML = `
+        <div class="orden-detalles">
+          <!-- Header -->
+          <div class="bg-gradient-primary text-white p-4">
+            <div class="d-flex align-items-center">
+              <div class="avatar-modern-md me-3">
+                ${orden.paciente_nombre ? orden.paciente_nombre[0] : '?'}${orden.paciente_nombre && orden.paciente_nombre.split(' ').length > 1 ? orden.paciente_nombre.split(' ')[1][0] : ''}
+              </div>
+              <div>
+                <h4 class="mb-1">${orden.paciente_nombre || 'N/A'}</h4>
+                <p class="mb-0 opacity-75">Orden ID: #${orden.orden_id || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Cuerpo de detalles -->
+          <div class="p-4">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Información General
+                  </h6>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Profesional:</span>
+                    <span class="detalle-valor">${orden.profesional_nombre || 'N/A'}</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Tipo:</span>
+                    <span class="badge-tipo-${orden.tipo_orden}">${orden.tipo_orden}</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Estado:</span>
+                    <span class="badge-${orden.estado_nombre}">${orden.estado_nombre}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3">
+                    <i class="fas fa-calendar me-2"></i>Fechas
+                  </h6>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Fecha Inicio:</span>
+                    <span class="detalle-valor">${orden.fecha_inicio || 'N/A'}</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Fecha Fin:</span>
+                    <span class="detalle-valor">${orden.fecha_fin || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            ${orden.medicamento_nombre && orden.medicamento_nombre !== 'N/A' ? `
+            <div class="detalle-seccion mb-4">
+              <h6 class="seccion-titulo mb-3">
+                <i class="fas fa-pills me-2"></i>Medicamento
+              </h6>
+              <div class="detalle-item">
+                <span class="detalle-label">Medicamento:</span>
+                <span class="detalle-valor">${orden.medicamento_nombre}</span>
+              </div>
+              <div class="detalle-item">
+                <span class="detalle-label">Dosis:</span>
+                <span class="detalle-valor">${orden.dosis || 'N/A'}</span>
+              </div>
+              <div class="detalle-item">
+                <span class="detalle-label">Frecuencia:</span>
+                <span class="detalle-valor">${orden.frecuencia || 'N/A'}</span>
+              </div>
+              <div class="detalle-item">
+                <span class="detalle-label">Duración:</span>
+                <span class="detalle-valor">${orden.duracion || 'N/A'}</span>
+              </div>
+            </div>
+            ` : ''}
+            
+            <div class="detalle-seccion">
+              <h6 class="seccion-titulo mb-3">
+                <i class="fas fa-file-alt me-2"></i>Descripción
+              </h6>
+              <div class="card-dark">
+                <div class="card-body-dark">
+                  <p class="mb-0">${orden.descripcion || 'No hay descripción disponible'}</p>
+                </div>
+              </div>
+            </div>
+            
+            ${orden.observaciones ? `
+            <div class="detalle-seccion mt-3">
+              <h6 class="seccion-titulo mb-3">
+                <i class="fas fa-sticky-note me-2"></i>Observaciones
+              </h6>
+              <div class="card-dark">
+                <div class="card-body-dark">
+                  <p class="mb-0">${orden.observaciones}</p>
+                </div>
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+      new bootstrap.Modal(document.getElementById('modalVerOrden')).show();
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showNotification('Error al cargar los detalles de la orden', 'error');
+    });
+}
+
+</script>
+
+<style>
+/* === ESTILOS ESPECÍFICOS PARA ÓRDENES === */
+
+.orden-card-modern {
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+}
+
+.orden-card-modern:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px var(--shadow);
+  border-color: var(--primary-color);
+}
+
+.orden-info-modern .info-item-modern {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.info-label-modern {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+}
+
+.info-value-modern {
+  color: var(--text-primary);
+  font-weight: 500;
+  max-width: 60%;
+  text-align: right;
+}
+
+.descripcion-preview .card-body-dark {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  background: rgba(var(--primary-rgb), 0.05);
+  border-radius: 8px;
+}
+
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges para tipos de orden */
+.badge-tipo-medicamento { 
+  background: #4CAF50; 
+  color: white;
+  padding: 4px 8px; 
+  border-radius: 4px; 
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-tipo-procedimiento { 
+  background: #2196F3; 
+  color: white;
+  padding: 4px 8px; 
+  border-radius: 4px; 
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-tipo-examen { 
+  background: #FF9800; 
+  color: white;
+  padding: 4px 8px; 
+  border-radius: 4px; 
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-tipo-terapia { 
+  background: #9C27B0; 
+  color: white;
+  padding: 4px 8px; 
+  border-radius: 4px; 
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* === ESTILOS BASE HEREDADOS === */
+
+/* Header del Dashboard */
+.page-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-icon {
+  color: var(--primary-color);
+  font-size: 24px;
+}
+
+.page-title {
+  color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* Botones Modernos */
+.btn-modern {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Inter', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-modern.btn-primary {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-modern.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+.btn-modern.btn-outline {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 2px solid var(--border-color);
+}
+
+.btn-modern.btn-outline:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.btn-modern.btn-sm {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-modern.btn-xs {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+/* Cards Oscuras */
+.card-dark {
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.card-dark:hover {
+  box-shadow: 0 8px 24px var(--shadow);
+}
+
+.card-body-dark {
+  padding: 20px;
+}
+
+.card-title-dark {
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Form Controls Oscuros */
+.form-control-dark {
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.form-control-dark:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: var(--card-bg);
+}
+
+.form-control-dark::placeholder {
+  color: var(--text-secondary);
+}
+
+.form-select-dark {
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.form-select-dark:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-select-dark option {
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.input-group-text.bg-dark {
+  background: var(--sidebar-hover) !important;
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+/* Avatar Moderno */
+.avatar-modern-sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+  color: white;
+  box-shadow: 0 2px 4px var(--shadow);
+}
+
+.avatar-modern-md {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.text-muted-dark {
+  color: var(--text-secondary) !important;
+}
+
+/* Badges Modernos de Estado */
+.badge-activo {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-completado {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-cancelado {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-pendiente {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Estado Vacío */
+.empty-state-dark {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-state-dark i {
+  opacity: 0.3;
+  margin-bottom: 16px;
+}
+
+.empty-state-dark h6 {
+  color: var(--text-secondary);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.empty-state-dark p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.border-dark {
+  border-color: var(--border-color) !important;
+}
+
+/* Estilos para el modal de detalles */
+.orden-detalles .detalle-seccion {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+}
+
+.orden-detalles .detalle-seccion:last-child {
+  border-bottom: none;
+}
+
+.seccion-titulo {
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.detalle-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.detalle-item:last-child {
+  border-bottom: none;
+}
+
+.detalle-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.detalle-valor {
+  font-weight: 400;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+}
+
+/* Variables CSS para colores */
+:root {
+  --primary-rgb: 59, 130, 246;
+}
+
+/* Estilos para las notificaciones personalizadas */
+#custom-alerts-container {
+  max-width: 400px !important;
+}
+
+.custom-alert {
+  max-width: 350px;
+  width: 100% !important;
+  animation: slideInRight 0.3s ease-out;
+  margin-bottom: 0.5rem;
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.custom-alert.fade:not(.show) {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Estilos específicos para modo oscuro en modales */
+[data-theme="dark"] .modal-content {
+  background-color: var(--content-bg);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-header {
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-footer {
+  border-top-color: var(--border-color);
+}
+
+[data-theme="dark"] .form-label {
+  color: var(--text-primary);
+}
+
+/* Form labels */
+.form-label-dark {
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+/* Modal styles */
+.modal-dark {
+  background-color: var(--content-bg);
+  color: var(--text-primary);
+}
+
+.modal-header-dark {
+  background-color: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.modal-body-dark {
+  background-color: var(--content-bg);
+  color: var(--text-primary);
+}
+
+.modal-footer-dark {
+  background-color: var(--card-bg);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Responsive para cards de órdenes */
+@media (max-width: 576px) {
+  .col-sm-6 {
+    flex: 0 0 auto;
+    width: 50%;
+  }
+
+  .orden-card-modern .card-body-dark {
+    padding: 0.75rem;
+  }
+
+  .avatar-modern-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.7rem;
+  }
+
+  .detalle-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detalle-valor {
+    text-align: left;
+    margin-top: 0.1rem;
+  }
+
+  #custom-alerts-container {
+    padding: 1rem !important;
+    max-width: 300px !important;
+  }
+
+  .custom-alert {
+    max-width: 280px !important;
+  }
+
+  .page-title-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .descripcion-preview .card-body-dark {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .col-sm-6 {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  #custom-alerts-container {
+    max-width: 250px !important;
+  }
+
+  .custom-alert {
+    max-width: 230px !important;
+  }
+}
+
+/* Grid más denso */
+.row.g-3 {
+  --bs-gutter-x: 0.75rem;
+  --bs-gutter-y: 0.75rem;
+}
+</style>
+
+{% endblock %}

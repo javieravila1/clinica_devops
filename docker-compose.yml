@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mysql:5.7
+    container_name: paliativos-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: clinica_paliativos
+      MYSQL_USER: paliativos_user
+      MYSQL_PASSWORD: 666
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./clinica_paliativos_final.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./procedures_all.sql:/docker-entrypoint-initdb.d/02_procedures.sql:ro
+    ports:
+      - "3306:3306"
+
+  web:
+    build: .
+    container_name: paliativos-web
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      FLASK_ENV: development
+      SECRET_KEY: clave_secreta_paliativos_2024
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_USER: paliativos_user 
+      MYSQL_PASSWORD: 666
+      MYSQL_DB: clinica_paliativos
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    command: ["python", "app.py"]
+
+volumes:
+  db_data:

@@ -1,0 +1,1299 @@
+{% extends "base.html" %} {% block title %}Gestión de Sesiones{% endblock %} {%
+block content %}
+<!-- Contenedor para mensajes personalizados -->
+<div
+  id="custom-alerts-container"
+  class="position-fixed top-0 end-0 p-3"
+  style="z-index: 9999; max-width: 400px"
+></div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-stethoscope title-icon"></i>
+    <h2 class="page-title mb-0">Sesiones Terapéuticas</h2>
+  </div>
+  {% if 'admin' in session.user_roles or 'profesional' in session.user_roles %}
+  <button
+    class="btn-modern btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#modalSesion"
+  >
+    <i class="fas fa-plus me-1"></i>Nueva Sesión
+  </button>
+  {% endif %}
+</div>
+
+<!-- Filtros y búsqueda compactos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark"
+            ><i class="fas fa-search"></i
+          ></span>
+          <input
+            type="text"
+            class="form-control-dark form-control-sm"
+            id="searchInput"
+            placeholder="Buscar por paciente..."
+          />
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-2 justify-content-end">
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterProfesional"
+            style="max-width: 150px"
+          >
+            <option value="todos">Todos</option>
+            {% for profesional in profesionales %}
+            <option value="{{ profesional.nombre }} {{ profesional.apellido }}">
+              {{ profesional.nombre }}
+            </option>
+            {% endfor %}
+          </select>
+          <button
+            class="btn-modern btn-outline btn-sm"
+            id="btnResetFilters"
+            title="Restablecer filtros"
+          >
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de Cards Compactas para Sesiones -->
+<div class="row g-3" id="cardsContainer">
+  {% for sesion in sesiones %}
+  <div
+    class="col-xxl-4 col-xl-4 col-lg-6 col-md-6 col-sm-6 fade-in sesion-card"
+    data-paciente="{{ sesion.paciente_nombre }}"
+    data-profesional="{{ sesion.profesional_nombre }}"
+  >
+    <div class="card-dark h-100 sesion-card-modern">
+      <div class="card-body-dark p-3">
+        <!-- Header compacto -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center" style="min-width: 0; flex: 1">
+            <div class="avatar-modern-sm me-2 flex-shrink-0">
+              {% if sesion.paciente_nombre %} {% set nombres =
+              sesion.paciente_nombre.split(' ') %} {% if nombres|length >= 2 %}
+              {{ nombres[0][0] }}{{ nombres[1][0] }} {% else %} {{ nombres[0][0]
+              }} {% endif %} {% else %} ?? {% endif %}
+            </div>
+            <div style="min-width: 0; flex: 1">
+              <h6 class="card-title-dark mb-0 text-truncate">
+                {{ sesion.paciente_nombre }}
+              </h6>
+              <small class="text-muted-dark"
+                >Sesión #{{ sesion.sesion_id }}</small
+              >
+            </div>
+          </div>
+          <span class="badge-modern badge-primary flex-shrink-0">
+            {{ sesion.fecha_registro.strftime('%d/%m') }}
+          </span>
+        </div>
+
+        <!-- Información de la sesión -->
+        <div class="sesion-info-modern mb-2">
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-user-md me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark"
+              >{{ sesion.profesional_nombre }}</small
+            >
+          </div>
+          {% if sesion.tecnica_utilizada %}
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-tools me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark text-truncate d-block"
+              >{{ sesion.tecnica_utilizada }}</small
+            >
+          </div>
+          {% endif %}
+          <div class="info-item-modern">
+            <i
+              class="fas fa-clock me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark">
+              {{ sesion.fecha_registro.strftime('%H:%M') }} {% if
+              sesion.duracion_real_min %} • {{ sesion.duracion_real_min }} min
+              {% endif %}
+            </small>
+          </div>
+        </div>
+
+        <!-- Notas preview -->
+        <div class="notas-preview mb-2">
+          {% if sesion.notas %}
+          <div class="card-dark border-0">
+            <div class="card-body-dark py-1 px-2">
+              <small class="text-muted-dark">
+                <i class="fas fa-file-alt me-1"></i>
+                {{ sesion.notas[:60] }}{% if sesion.notas|length > 60 %}...{%
+                endif %}
+              </small>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-1">
+            <small class="text-muted-dark">
+              <i class="fas fa-file-alt me-1"></i>
+              Sin notas
+            </small>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Acciones compactas -->
+        <div class="d-flex justify-content-between pt-2 border-top border-dark">
+          <button
+            class="btn-modern btn-outline btn-xs btn-ver-sesion"
+            data-sesion-id="{{ sesion.sesion_id }}"
+            title="Ver detalles"
+          >
+            <i class="fas fa-eye"></i>
+          </button>
+          {% if sesion.notas %}
+          <button
+            class="btn-modern btn-outline btn-xs"
+            data-bs-toggle="popover"
+            data-bs-title="Notas de la Sesión"
+            data-bs-content="{{ sesion.notas }}"
+            title="Ver notas completas"
+          >
+            <i class="fas fa-file-alt"></i>
+          </button>
+          {% endif %} {% if 'admin' in session.user_roles or 'profesional' in
+          session.user_roles %}
+          <button
+            class="btn-modern btn-outline btn-xs btn-editar-sesion"
+            data-sesion-id="{{ sesion.sesion_id }}"
+            title="Editar"
+          >
+            <i class="fas fa-edit"></i>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card-dark text-center py-4">
+      <div class="card-body-dark">
+        <div class="empty-state-dark">
+          <i class="fas fa-stethoscope fa-2x mb-3"></i>
+          <h6>No hay sesiones registradas</h6>
+          <p class="mb-2">Comience registrando una nueva sesión.</p>
+          {% if 'admin' in session.user_roles or 'profesional' in
+          session.user_roles %}
+          <button
+            class="btn-modern btn-primary mt-1"
+            data-bs-toggle="modal"
+            data-bs-target="#modalSesion"
+          >
+            <i class="fas fa-plus me-1"></i>Registrar Primera Sesión
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Contador de sesiones -->
+<div class="mt-3 text-end">
+  <small class="text-muted-dark">
+    Mostrando
+    <span id="contadorSesiones">{{ sesiones|length }}</span> sesión(es)
+  </small>
+</div>
+
+<!-- Modal para nueva sesión -->
+<div class="modal fade" id="modalSesion" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-plus me-2"></i>Registrar Nueva Sesión
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form
+        method="POST"
+        action="{{ url_for('sesiones.registrar_sesion') }}"
+        id="formSesion"
+      >
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Cita *</label>
+                <select
+                  class="form-select-dark"
+                  name="cita_id"
+                  id="selectCita"
+                  required
+                >
+                  <option value="">Cargando citas...</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Técnica Utilizada</label>
+                <input
+                  type="text"
+                  class="form-control-dark"
+                  name="tecnica_utilizada"
+                  placeholder="Ej: Terapia cognitivo-conductual"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Duración Real (minutos)</label>
+                <input
+                  type="number"
+                  class="form-control-dark"
+                  name="duracion_real_min"
+                  min="1"
+                  max="240"
+                  placeholder="60"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notas de la Sesión</label>
+            <textarea
+              class="form-control-dark"
+              name="notas"
+              rows="4"
+              placeholder="Describa lo realizado en la sesión, observaciones, progreso..."
+            ></textarea>
+          </div>
+
+          <!-- Sección para puntajes de escalas -->
+          <div class="mb-3">
+            <label class="form-label">Puntajes de Escalas Clínicas</label>
+            <div id="escalas-container">
+              <div class="row mb-2 escala-item">
+                <div class="col-md-5">
+                  <select
+                    class="form-select-dark escala-select"
+                    name="escala_id_0"
+                  >
+                    <option value="">Seleccionar escala...</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <input
+                    type="number"
+                    class="form-control-dark"
+                    name="puntaje_0"
+                    step="0.1"
+                    placeholder="Puntaje"
+                    min="0"
+                  />
+                </div>
+                <div class="col-md-3">
+                  <button
+                    type="button"
+                    class="btn-modern btn-outline btn-sm btn-remove-escala"
+                    disabled
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn-modern btn-outline btn-sm mt-2"
+              id="btnAgregarEscala"
+            >
+              <i class="fas fa-plus"></i> Agregar Escala
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Registrar Sesión
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles de sesión -->
+<div class="modal fade" id="modalVerSesion" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-stethoscope me-2"></i>Detalles de la Sesión
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body p-0" id="detallesSesion">
+        <!-- Los detalles se cargarán aquí via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para editar sesión -->
+<div class="modal fade" id="modalEditarSesion" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-edit me-2"></i>Editar Sesión
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form method="POST" action="" id="formEditarSesion">
+        <div class="modal-body" id="formEditarSesionBody">
+          <!-- El formulario se cargará aquí via AJAX -->
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Actualizar Sesión
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // Función para mostrar notificaciones personalizadas
+  function showNotification(message, type) {
+    const container = document.getElementById("custom-alerts-container");
+    if (!container) {
+      console.error("No se encontró el contenedor de alertas");
+      return;
+    }
+
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${
+      type === "error" ? "danger" : "success"
+    } alert-dismissible fade show custom-alert mb-2`;
+    alertDiv.style.maxWidth = "350px";
+    alertDiv.style.width = "100%";
+    alertDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    alertDiv.style.border = "none";
+    alertDiv.style.borderRadius = "8px";
+    alertDiv.style.fontSize = "0.875rem";
+
+    const icon = type === "error" ? "exclamation-triangle" : "check-circle";
+    const title = type === "error" ? "Error" : "Éxito";
+
+    alertDiv.innerHTML = `
+      <div class="d-flex align-items-start">
+        <i class="fas fa-${icon} mt-1 me-2 ${
+      type === "error" ? "text-danger" : "text-success"
+    }" style="flex-shrink: 0;"></i>
+        <div class="flex-grow-1" style="min-width: 0;">
+          <strong class="d-block mb-1">${title}</strong>
+          <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+      </div>
+    `;
+
+    container.insertBefore(alertDiv, container.firstChild);
+
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+      }
+    }, 5000);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    let escalaCount = 0;
+
+    // Cargar citas pendientes
+    cargarCitasPendientes();
+
+    // Cargar escalas clínicas
+    cargarEscalas();
+
+    // Agregar campo de escala
+    document
+      .getElementById("btnAgregarEscala")
+      .addEventListener("click", function () {
+        escalaCount++;
+        const container = document.getElementById("escalas-container");
+        const newEscala = document.createElement("div");
+        newEscala.className = "row mb-2 escala-item";
+        newEscala.innerHTML = `
+            <div class="col-md-5">
+                <select class="form-select-dark escala-select" name="escala_id_${escalaCount}">
+                    <option value="">Seleccionar escala...</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="number" class="form-control-dark" name="puntaje_${escalaCount}" step="0.1" placeholder="Puntaje" min="0">
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn-modern btn-outline btn-sm btn-remove-escala">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(newEscala);
+
+        // Cargar opciones para el nuevo select
+        cargarEscalasParaSelect(newEscala.querySelector(".escala-select"));
+      });
+
+    // Remover campo de escala
+    document.addEventListener("click", function (e) {
+      if (
+        e.target.classList.contains("btn-remove-escala") ||
+        e.target.parentElement.classList.contains("btn-remove-escala")
+      ) {
+        const btn = e.target.classList.contains("btn-remove-escala")
+          ? e.target
+          : e.target.parentElement;
+        btn.closest(".escala-item").remove();
+      }
+    });
+
+    // Inicializar popovers
+    const popoverTriggerList = [].slice.call(
+      document.querySelectorAll('[data-bs-toggle="popover"]')
+    );
+    const popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+      return new bootstrap.Popover(popoverTriggerEl);
+    });
+
+    // Manejar el botón de ver detalles de sesión
+    document.querySelectorAll(".btn-ver-sesion").forEach((button) => {
+      button.addEventListener("click", function () {
+        const sesionId = this.getAttribute("data-sesion-id");
+        cargarDetallesSesion(sesionId);
+      });
+    });
+
+    // Manejar el botón de editar sesión
+    document.querySelectorAll(".btn-editar-sesion").forEach((button) => {
+      button.addEventListener("click", function () {
+        const sesionId = this.getAttribute("data-sesion-id");
+        cargarFormularioEdicionSesion(sesionId);
+      });
+    });
+
+    // Filtros y búsqueda para sesiones
+    const searchInput = document.getElementById("searchInput");
+    const filterProfesional = document.getElementById("filterProfesional");
+    const btnResetFilters = document.getElementById("btnResetFilters");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", filtrarSesiones);
+    }
+
+    if (filterProfesional) {
+      filterProfesional.addEventListener("change", filtrarSesiones);
+    }
+
+    if (btnResetFilters) {
+      btnResetFilters.addEventListener("click", resetearFiltros);
+    }
+  });
+
+  function filtrarSesiones() {
+    const searchTerm = document
+      .getElementById("searchInput")
+      .value.toLowerCase();
+    const profesionalFiltro =
+      document.getElementById("filterProfesional").value;
+    let contador = 0;
+
+    document.querySelectorAll(".sesion-card").forEach((card) => {
+      const paciente = card.getAttribute("data-paciente").toLowerCase();
+      const profesional = card.getAttribute("data-profesional");
+
+      const coincidePaciente = paciente.includes(searchTerm);
+      const coincideProfesional =
+        profesionalFiltro === "todos" || profesional === profesionalFiltro;
+
+      if (coincidePaciente && coincideProfesional) {
+        card.style.display = "block";
+        contador++;
+      } else {
+        card.style.display = "none";
+      }
+    });
+
+    // Actualizar contador
+    document.getElementById("contadorSesiones").textContent = contador;
+  }
+
+  function resetearFiltros() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("filterProfesional").value = "todos";
+    filtrarSesiones();
+  }
+
+  function cargarCitasPendientes() {
+    console.log("Cargando citas pendientes para sesión...");
+
+    fetch("/api/citas/pendientes")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((citas) => {
+        console.log("Citas pendientes recibidas:", citas);
+        const select = document.getElementById("selectCita");
+        select.innerHTML = '<option value="">Seleccionar cita...</option>';
+
+        if (citas.length === 0) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "No hay citas pendientes para registrar sesión";
+          option.disabled = true;
+          select.appendChild(option);
+          showNotification(
+            "No hay citas pendientes para registrar sesión",
+            "info"
+          );
+          return;
+        }
+
+        citas.forEach((cita) => {
+          const option = document.createElement("option");
+          option.value = cita.cita_id;
+
+          let fechaFormateada = "Fecha no disponible";
+          if (cita.fecha_inicio) {
+            try {
+              const fecha = new Date(cita.fecha_inicio);
+              const ahora = new Date();
+              const esHoy = fecha.toDateString() === ahora.toDateString();
+              const esPasada = fecha < ahora;
+
+              let indicador = "";
+              if (esHoy) indicador = "🕐 HOY - ";
+              else if (esPasada) indicador = "⚠️ PENDIENTE - ";
+
+              fechaFormateada = fecha.toLocaleDateString("es-ES", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+
+              option.textContent = `${indicador}${cita.paciente_nombre} - ${fechaFormateada} - ${cita.profesional_nombre}`;
+            } catch (e) {
+              console.error("Error formateando fecha:", e);
+              option.textContent = `${cita.paciente_nombre} - ${cita.profesional_nombre}`;
+            }
+          } else {
+            option.textContent = `${cita.paciente_nombre} - ${cita.profesional_nombre}`;
+          }
+
+          select.appendChild(option);
+        });
+
+        showNotification(
+          `Se cargaron ${citas.length} citas pendientes`,
+          "success"
+        );
+      })
+      .catch((error) => {
+        console.error("Error cargando citas:", error);
+        const select = document.getElementById("selectCita");
+        select.innerHTML = '<option value="">Error al cargar citas</option>';
+        showNotification("Error al cargar las citas pendientes", "error");
+      });
+  }
+
+  function cargarEscalas() {
+    fetch("/api/escalas")
+      .then((response) => response.json())
+      .then((escalas) => {
+        const escalaSelects = document.querySelectorAll(".escala-select");
+        escalaSelects.forEach((select) => {
+          cargarEscalasParaSelect(select);
+        });
+      })
+      .catch((error) => {
+        console.error("Error cargando escalas:", error);
+      });
+  }
+
+  function cargarEscalasParaSelect(selectElement) {
+    fetch("/api/escalas")
+      .then((response) => response.json())
+      .then((escalas) => {
+        selectElement.innerHTML =
+          '<option value="">Seleccionar escala...</option>';
+        escalas.forEach((escala) => {
+          const option = document.createElement("option");
+          option.value = escala.escala_id;
+          option.textContent = escala.nombre;
+          selectElement.appendChild(option);
+        });
+      })
+      .catch((error) => {
+        console.error("Error cargando escalas para select:", error);
+        selectElement.innerHTML =
+          '<option value="">Error al cargar escalas</option>';
+      });
+  }
+
+  function cargarDetallesSesion(sesionId) {
+    fetch(`/api/sesiones/${sesionId}`)
+      .then((response) => response.json())
+      .then((sesion) => {
+        const modalBody = document.getElementById("detallesSesion");
+        modalBody.innerHTML = `
+          <div class="sesion-detalles">
+            <!-- Header con información principal -->
+            <div class="sesion-header p-4" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white;">
+              <div class="d-flex align-items-center">
+                <div class="avatar-modern-md me-3">
+  ${sesion.paciente_nombre ? sesion.paciente_nombre[0] : "?"}$
+  ${
+    sesion.paciente_nombre && sesion.paciente_nombre.split(" ").length > 1
+      ? sesion.paciente_nombre.split(" ")[1][0]
+      : ""
+  }
+</div>
+                <div>
+                  <h4 class="mb-1">${sesion.paciente_nombre || "N/A"}</h4>
+                  <p class="mb-0 opacity-75">Sesión ID: #${
+                    sesion.sesion_id || "N/A"
+                  }</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Cuerpo de detalles -->
+            <div class="p-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-info-circle me-2"></i>Información de la Sesión
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Profesional:</span>
+                      <span class="detalle-valor">${
+                        sesion.profesional_nombre || "N/A"
+                      }</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Fecha y Hora:</span>
+                      <span class="detalle-valor">${formatDateTime(
+                        sesion.fecha_registro
+                      )}</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Estado:</span>
+                      <span class="detalle-valor">
+                        <span class="badge-modern badge-${
+                          sesion.estado_nombre === "completada"
+                            ? "success"
+                            : "warning"
+                        }">
+                          ${sesion.estado_nombre || "N/A"}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-chart-line me-2"></i>Detalles Técnicos
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Técnica Utilizada:</span>
+                      <span class="detalle-valor">${
+                        sesion.tecnica_utilizada || "N/A"
+                      }</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Duración Real:</span>
+                      <span class="detalle-valor">${
+                        sesion.duracion_real_min || "N/A"
+                      } minutos</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="detalle-seccion">
+                <h6 class="seccion-titulo mb-3">
+                  <i class="fas fa-file-alt me-2"></i>Notas de la Sesión
+                </h6>
+                <div class="card-dark">
+                  <div class="card-body-dark">
+                    <p class="mb-0">${
+                      sesion.notas ||
+                      "No hay notas registradas para esta sesión."
+                    }</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        new bootstrap.Modal(document.getElementById("modalVerSesion")).show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar los detalles de la sesión", "error");
+      });
+  }
+
+  function cargarFormularioEdicionSesion(sesionId) {
+    fetch(`/api/sesiones/${sesionId}`)
+      .then((response) => response.json())
+      .then((sesion) => {
+        const modalBody = document.getElementById("formEditarSesionBody");
+        modalBody.innerHTML = `
+                <input type="hidden" name="sesion_id" value="${
+                  sesion.sesion_id
+                }">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Técnica Utilizada</label>
+                            <input type="text" class="form-control-dark" name="tecnica_utilizada" value="${
+                              sesion.tecnica_utilizada || ""
+                            }">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Duración Real (minutos)</label>
+                            <input type="number" class="form-control-dark" name="duracion_real_min" value="${
+                              sesion.duracion_real_min || ""
+                            }" min="1" max="240">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notas de la Sesión</label>
+                    <textarea class="form-control-dark" name="notas" rows="4">${
+                      sesion.notas || ""
+                    }</textarea>
+                </div>
+            `;
+        document.getElementById(
+          "formEditarSesion"
+        ).action = `/sesiones/editar/${sesionId}`;
+        new bootstrap.Modal(
+          document.getElementById("modalEditarSesion")
+        ).show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar el formulario de edición", "error");
+      });
+  }
+
+  // Función auxiliar para formatear fecha y hora
+  function formatDateTime(dateTimeStr) {
+    if (!dateTimeStr) return "N/A";
+    try {
+      const date = new Date(dateTimeStr);
+      return date.toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      console.error("Error formateando fecha:", e);
+      return "N/A";
+    }
+  }
+</script>
+
+<style>
+  /* === ESTILOS ESPECÍFICOS PARA SESIONES === */
+
+  .sesion-card-modern {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .sesion-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+    border-color: var(--primary-color);
+  }
+
+  .sesion-info-modern .info-item-modern {
+    display: flex;
+    align-items: center;
+  }
+
+  .notas-preview .card-body-dark {
+    font-size: 0.8rem;
+    line-height: 1.3;
+    background: rgba(var(--primary-rgb), 0.05);
+    border-radius: 8px;
+  }
+
+  /* === ESTILOS BASE HEREDADOS === */
+
+  /* Header del Dashboard */
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-modern.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-modern.btn-xs {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Cards Oscuras */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .card-body-dark {
+    padding: 20px;
+  }
+
+  .card-title-dark {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* Form Controls Oscuros */
+  .form-control-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: var(--card-bg);
+  }
+
+  .form-control-dark::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .form-select-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-select-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-select-dark option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .input-group-text.bg-dark {
+    background: var(--sidebar-hover) !important;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* Avatar Moderno */
+  .avatar-modern-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    background: linear-gradient(
+      135deg,
+      var(--primary-color),
+      var(--primary-dark)
+    );
+    color: white;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  .avatar-modern-md {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .text-muted-dark {
+    color: var(--text-secondary) !important;
+  }
+
+  /* Badges Modernos */
+  .badge-modern {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-modern.badge-primary {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .badge-modern.badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .badge-modern.badge-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .badge-modern.badge-secondary {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+
+  /* Estado Vacío */
+  .empty-state-dark {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-dark i {
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-dark h6 {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-dark p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .border-dark {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Estilos para el modal de detalles */
+  .sesion-detalles .detalle-seccion {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+
+  .sesion-detalles .detalle-seccion:last-child {
+    border-bottom: none;
+  }
+
+  .seccion-titulo {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .detalle-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+  }
+
+  .detalle-item:last-child {
+    border-bottom: none;
+  }
+
+  .detalle-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .detalle-valor {
+    font-weight: 400;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  /* Variables CSS para colores */
+  :root {
+    --primary-rgb: 59, 130, 246;
+  }
+
+  /* Estilos para las notificaciones personalizadas */
+  #custom-alerts-container {
+    max-width: 400px !important;
+  }
+
+  .custom-alert {
+    max-width: 350px;
+    width: 100% !important;
+    animation: slideInRight 0.3s ease-out;
+    margin-bottom: 0.5rem;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .custom-alert.fade:not(.show) {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Estilos específicos para modo oscuro en modales */
+  [data-theme="dark"] .modal-content {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  [data-theme="dark"] .modal-header {
+    border-bottom-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .modal-footer {
+    border-top-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .form-label {
+    color: var(--text-primary);
+  }
+
+  /* Responsive para cards de sesiones */
+  @media (max-width: 576px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 50%;
+    }
+
+    .sesion-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+
+    .detalle-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detalle-valor {
+      text-align: left;
+      margin-top: 0.1rem;
+    }
+
+    #custom-alerts-container {
+      padding: 1rem !important;
+      max-width: 300px !important;
+    }
+
+    .custom-alert {
+      max-width: 280px !important;
+    }
+
+    .page-title-wrapper {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 24px;
+    }
+
+    .notas-preview .card-body-dark {
+      font-size: 0.75rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+
+    #custom-alerts-container {
+      max-width: 250px !important;
+    }
+
+    .custom-alert {
+      max-width: 230px !important;
+    }
+  }
+
+  /* Grid más denso */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+</style>
+{% endblock %}

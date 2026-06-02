@@ -1,0 +1,1156 @@
+{% extends "base.html" %} {% block title %}Familiares de Pacientes{% endblock %}
+{% block content %}
+
+<!-- Contenedor para mensajes personalizados -->
+<div
+  id="custom-alerts-container"
+  class="position-fixed top-0 end-0 p-3"
+  style="z-index: 9999; max-width: 400px"
+></div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-user-friends title-icon"></i>
+    <h2 class="page-title mb-0">Familiares de Pacientes</h2>
+  </div>
+  {% if 'admin' in session.user_roles or 'recepcion' in session.user_roles %}
+  <button
+    class="btn-modern btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#modalFamiliar"
+  >
+    <i class="fas fa-plus me-1"></i>Registrar Familiar
+  </button>
+  {% endif %}
+</div>
+
+<!-- Filtros y búsqueda compactos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark"
+            ><i class="fas fa-search"></i
+          ></span>
+          <input
+            type="text"
+            class="form-control-dark form-control-sm"
+            id="searchInput"
+            placeholder="Buscar por nombre o paciente..."
+          />
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-2 justify-content-end">
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterParentesco"
+            style="max-width: 180px"
+          >
+            <option value="todos">Todos los parentescos</option>
+            <option value="conyuge">Cónyuge</option>
+            <option value="hijo">Hijo/a</option>
+            <option value="padre">Padre</option>
+            <option value="madre">Madre</option>
+            <option value="hermano">Hermano/a</option>
+            <option value="otro">Otro</option>
+          </select>
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterEmergencia"
+            style="max-width: 200px"
+          >
+            <option value="todos">Todos</option>
+            <option value="si">Contacto de emergencia</option>
+            <option value="no">No es contacto emergencia</option>
+          </select>
+          <button
+            class="btn-modern btn-outline btn-sm"
+            id="btnResetFilters"
+            title="Restablecer filtros"
+          >
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de Cards Compactas para Familiares -->
+<div class="row g-3" id="cardsContainer">
+  {% for familiar in familiares %}
+  <div
+    class="col-xxl-4 col-xl-4 col-lg-6 col-md-6 col-sm-6 fade-in familiar-card"
+    data-parentesco="{{ familiar.tipo_parentesco }}"
+    data-emergencia="{{ 'si' if familiar.es_contacto_emergencia else 'no' }}"
+    data-nombre="{{ familiar.nombre }} {{ familiar.apellido }}"
+    data-paciente="{{ familiar.paciente_nombre }} {{ familiar.paciente_apellido }}"
+  >
+    <div class="card-dark h-100 familiar-card-modern">
+      <div class="card-body-dark p-3">
+        <!-- Header compacto -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center" style="min-width: 0; flex: 1">
+            <div
+              class="avatar-modern-sm me-2 flex-shrink-0"
+              style="background: linear-gradient(135deg, #667eea, #764ba2)"
+            >
+              {{ familiar.nombre[0] if familiar.nombre else '?' }}{{
+              familiar.apellido[0] if familiar.apellido else '' }}
+            </div>
+            <div style="min-width: 0; flex: 1">
+              <h6 class="card-title-dark mb-0 text-truncate">
+                {{ familiar.nombre }} {{ familiar.apellido }} {% if
+                familiar.segundo_apellido %}{{ familiar.segundo_apellido }}{%
+                endif %}
+              </h6>
+              <small class="text-muted-dark"
+                >{{ familiar.tipo_parentesco | capitalize }}</small
+              >
+            </div>
+          </div>
+          {% if familiar.es_contacto_emergencia %}
+          <span
+            class="badge bg-danger flex-shrink-0"
+            title="Contacto de emergencia"
+          >
+            <i class="fas fa-exclamation-circle"></i>
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Información del familiar -->
+        <div class="familiar-info-modern mb-2">
+          <div class="info-item-modern mb-1">
+            <span class="info-label-modern">
+              <i class="fas fa-user me-1"></i>Paciente:
+            </span>
+            <span class="info-value-modern text-truncate"
+              >{{ familiar.paciente_nombre }} {{ familiar.paciente_apellido
+              }}</span
+            >
+          </div>
+          {% if familiar.telefono %}
+          <div class="info-item-modern mb-1">
+            <span class="info-label-modern">
+              <i class="fas fa-phone me-1"></i>Teléfono:
+            </span>
+            <span class="info-value-modern">{{ familiar.telefono }}</span>
+          </div>
+          {% endif %} {% if familiar.email %}
+          <div class="info-item-modern mb-1">
+            <span class="info-label-modern">
+              <i class="fas fa-envelope me-1"></i>Email:
+            </span>
+            <span class="info-value-modern text-truncate"
+              >{{ familiar.email }}</span
+            >
+          </div>
+          {% endif %}
+          <div class="info-item-modern">
+            <span class="info-label-modern">
+              <i class="fas fa-info-circle me-1"></i>Estado:
+            </span>
+            <span class="badge-{{ familiar.estado_nombre }}"
+              >{{ familiar.estado_nombre | capitalize }}</span
+            >
+          </div>
+        </div>
+
+        <!-- Tipo de parentesco badge -->
+        <div class="mb-2">
+          <span class="badge-parentesco-{{ familiar.tipo_parentesco }}">
+            {% if familiar.tipo_parentesco == 'conyuge' %}<i
+              class="fas fa-heart me-1"
+            ></i>
+            {% elif familiar.tipo_parentesco == 'hijo' %}<i
+              class="fas fa-child me-1"
+            ></i>
+            {% elif familiar.tipo_parentesco in ['padre', 'madre'] %}<i
+              class="fas fa-user-tie me-1"
+            ></i>
+            {% elif familiar.tipo_parentesco == 'hermano' %}<i
+              class="fas fa-users me-1"
+            ></i>
+            {% else %}<i class="fas fa-user me-1"></i>{% endif %} {{
+            familiar.tipo_parentesco | capitalize }}
+          </span>
+        </div>
+
+        <!-- Acciones compactas -->
+        <div class="d-flex justify-content-between pt-2 border-top border-dark">
+          <button
+            class="btn-modern btn-xs btn-outline btn-ver-familiar"
+            onclick="verFamiliar({{ familiar.familiar_id }})"
+            title="Ver detalles"
+          >
+            <i class="fas fa-eye me-1"></i>Ver
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card-dark text-center py-4">
+      <div class="card-body-dark">
+        <div class="empty-state-dark">
+          <i class="fas fa-user-friends fa-2x mb-3"></i>
+          <h6>No hay familiares registrados</h6>
+          <p class="mb-2">Comience registrando un familiar de paciente.</p>
+          {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles %}
+          <button
+            class="btn-modern btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#modalFamiliar"
+          >
+            <i class="fas fa-plus me-1"></i>Registrar Familiar
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Contador de familiares -->
+<div class="mt-3 text-end">
+  <small class="text-muted-dark">
+    Mostrando
+    <span id="contadorFamiliares">{{ familiares|length }}</span> familiar(es)
+  </small>
+</div>
+
+<!-- Modal para crear/editar familiar -->
+<div class="modal fade" id="modalFamiliar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalFamiliarTitle">
+          <i class="fas fa-user-friends me-2"></i>Registrar Familiar
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form
+        id="formFamiliar"
+        method="POST"
+        action="{{ url_for('familiares.crear_familiar') }}"
+      >
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <label class="form-label-dark">Paciente *</label>
+              <select class="form-select-dark" name="paciente_id" required>
+                <option value="">Seleccione un paciente</option>
+                {% for paciente in pacientes %}
+                <option value="{{ paciente.paciente_id }}">
+                  {{ paciente.nombre }} {{ paciente.apellido }} - ID: {{
+                  paciente.identificacion }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Tipo de Parentesco *</label>
+              <select class="form-select-dark" name="tipo_parentesco" required>
+                <option value="">Seleccione...</option>
+                <option value="conyuge">Cónyuge</option>
+                <option value="hijo">Hijo/a</option>
+                <option value="padre">Padre</option>
+                <option value="madre">Madre</option>
+                <option value="hermano">Hermano/a</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Nombre *</label>
+              <input
+                type="text"
+                class="form-control-dark"
+                name="nombre"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Primer Apellido *</label>
+              <input
+                type="text"
+                class="form-control-dark"
+                name="apellido"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Segundo Apellido</label>
+              <input
+                type="text"
+                class="form-control-dark"
+                name="segundo_apellido"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Fecha de Nacimiento</label>
+              <input
+                type="date"
+                class="form-control-dark"
+                name="fecha_nacimiento"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-dark">Teléfono</label>
+              <input
+                type="tel"
+                class="form-control-dark"
+                name="telefono"
+                placeholder="Ej: 3001234567"
+              />
+            </div>
+            <div class="col-md-12">
+              <label class="form-label-dark">Email</label>
+              <input
+                type="email"
+                class="form-control-dark"
+                name="email"
+                placeholder="ejemplo@correo.com"
+              />
+            </div>
+            <div class="col-md-12">
+              <div class="form-check form-check-dark">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="es_contacto_emergencia"
+                  id="esContactoEmergencia"
+                  value="1"
+                />
+                <label class="form-check-label" for="esContactoEmergencia">
+                  <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                  Marcar como contacto de emergencia
+                </label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label-dark">Observaciones</label>
+              <textarea
+                class="form-control-dark"
+                name="observaciones"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            Guardar Familiar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles -->
+<div class="modal fade" id="modalVerFamiliar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user-friends me-2"></i>Detalles del Familiar
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body p-0" id="detallesFamiliar">
+        <!-- Contenido dinámico -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Función para mostrar notificaciones personalizadas
+  function showNotification(message, type) {
+    const container = document.getElementById("custom-alerts-container");
+    if (!container) {
+      console.error("No se encontró el contenedor de alertas");
+      return;
+    }
+
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${
+      type === "error" ? "danger" : "success"
+    } alert-dismissible fade show custom-alert mb-2`;
+    alertDiv.style.maxWidth = "350px";
+    alertDiv.style.width = "100%";
+    alertDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    alertDiv.style.border = "none";
+    alertDiv.style.borderRadius = "8px";
+    alertDiv.style.fontSize = "0.875rem";
+
+    const icon = type === "error" ? "exclamation-triangle" : "check-circle";
+    const title = type === "error" ? "Error" : "Éxito";
+
+    alertDiv.innerHTML = `
+    <div class="d-flex align-items-start">
+      <i class="fas fa-${icon} mt-1 me-2 ${
+      type === "error" ? "text-danger" : "text-success"
+    }" style="flex-shrink: 0;"></i>
+      <div class="flex-grow-1" style="min-width: 0;">
+        <strong class="d-block mb-1">${title}</strong>
+        <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+      </div>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+    </div>
+  `;
+
+    container.insertBefore(alertDiv, container.firstChild);
+
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+      }
+    }, 5000);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Filtros y búsqueda
+    const searchInput = document.getElementById("searchInput");
+    const filterParentesco = document.getElementById("filterParentesco");
+    const filterEmergencia = document.getElementById("filterEmergencia");
+    const btnResetFilters = document.getElementById("btnResetFilters");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", filtrarFamiliares);
+    }
+
+    if (filterParentesco) {
+      filterParentesco.addEventListener("change", filtrarFamiliares);
+    }
+
+    if (filterEmergencia) {
+      filterEmergencia.addEventListener("change", filtrarFamiliares);
+    }
+
+    if (btnResetFilters) {
+      btnResetFilters.addEventListener("click", resetearFiltros);
+    }
+  });
+
+  function filtrarFamiliares() {
+    const searchTerm = document
+      .getElementById("searchInput")
+      .value.toLowerCase();
+    const parentescoFiltro = document.getElementById("filterParentesco").value;
+    const emergenciaFiltro = document.getElementById("filterEmergencia").value;
+    let contador = 0;
+
+    document.querySelectorAll(".familiar-card").forEach((card) => {
+      const nombre = card.getAttribute("data-nombre").toLowerCase();
+      const paciente = card.getAttribute("data-paciente").toLowerCase();
+      const parentesco = card.getAttribute("data-parentesco");
+      const emergencia = card.getAttribute("data-emergencia");
+
+      const coincideBusqueda =
+        nombre.includes(searchTerm) || paciente.includes(searchTerm);
+      const coincideParentesco =
+        parentescoFiltro === "todos" || parentesco === parentescoFiltro;
+      const coincideEmergencia =
+        emergenciaFiltro === "todos" || emergencia === emergenciaFiltro;
+
+      if (coincideBusqueda && coincideParentesco && coincideEmergencia) {
+        card.style.display = "block";
+        contador++;
+      } else {
+        card.style.display = "none";
+      }
+    });
+
+    // Actualizar contador
+    document.getElementById("contadorFamiliares").textContent = contador;
+  }
+
+  function resetearFiltros() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("filterParentesco").value = "todos";
+    document.getElementById("filterEmergencia").value = "todos";
+    filtrarFamiliares();
+  }
+
+  function verFamiliar(familiarId) {
+    fetch(`/api/familiares/${familiarId}`)
+      .then((response) => response.json())
+      .then((familiar) => {
+        const modalBody = document.getElementById("detallesFamiliar");
+        modalBody.innerHTML = `
+        <div class="familiar-detalles">
+          <!-- Header -->
+          <div class="bg-gradient-primary text-white p-4">
+            <div class="d-flex align-items-center">
+              <div class="avatar-modern-md me-3">
+                ${familiar.nombre ? familiar.nombre[0] : "?"}${
+          familiar.apellido ? familiar.apellido[0] : ""
+        }
+              </div>
+              <div>
+                <h4 class="mb-1">${familiar.nombre || "N/A"} ${
+          familiar.apellido || ""
+        } ${familiar.segundo_apellido || ""}</h4>
+                <p class="mb-0 opacity-75">Familiar ID: #${
+                  familiar.familiar_id || "N/A"
+                }</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Cuerpo de detalles -->
+          <div class="p-4">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Información General
+                  </h6>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Paciente:</span>
+                    <span class="detalle-valor">${
+                      familiar.paciente_nombre || "N/A"
+                    }</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Parentesco:</span>
+                    <span class="badge-parentesco-${
+                      familiar.tipo_parentesco
+                    }">${familiar.tipo_parentesco}</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Estado:</span>
+                    <span class="badge-${familiar.estado_nombre}">${
+          familiar.estado_nombre
+        }</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="detalle-seccion mb-4">
+                  <h6 class="seccion-titulo mb-3">
+                    <i class="fas fa-address-card me-2"></i>Contacto
+                  </h6>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Teléfono:</span>
+                    <span class="detalle-valor"><i class="fas fa-phone me-1"></i>${
+                      familiar.telefono || "No registrado"
+                    }</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Email:</span>
+                    <span class="detalle-valor"><i class="fas fa-envelope me-1"></i>${
+                      familiar.email || "No registrado"
+                    }</span>
+                  </div>
+                  <div class="detalle-item">
+                    <span class="detalle-label">Fecha Nacimiento:</span>
+                    <span class="detalle-valor">${
+                      familiar.fecha_nacimiento || "No registrada"
+                    }</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="detalle-seccion mb-4">
+              <h6 class="seccion-titulo mb-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>Contacto de Emergencia
+              </h6>
+              <div class="card-dark">
+                <div class="card-body-dark">
+                  ${
+                    familiar.es_contacto_emergencia
+                      ? '<span class="badge bg-danger"><i class="fas fa-exclamation-circle me-1"></i>SÍ - Es contacto de emergencia</span>'
+                      : '<span class="badge bg-secondary">No es contacto de emergencia</span>'
+                  }
+                </div>
+              </div>
+            </div>
+            
+            ${
+              familiar.observaciones
+                ? `
+            <div class="detalle-seccion">
+              <h6 class="seccion-titulo mb-3">
+                <i class="fas fa-sticky-note me-2"></i>Observaciones
+              </h6>
+              <div class="card-dark">
+                <div class="card-body-dark">
+                  <p class="mb-0">${familiar.observaciones}</p>
+                </div>
+              </div>
+            </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      `;
+        new bootstrap.Modal(document.getElementById("modalVerFamiliar")).show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar los detalles del familiar", "error");
+      });
+  }
+</script>
+
+<style>
+  /* === ESTILOS ESPECÍFICOS PARA FAMILIARES === */
+
+  .familiar-card-modern {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .familiar-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+    border-color: var(--primary-color);
+  }
+
+  .familiar-info-modern .info-item-modern {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+
+  .info-label-modern {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .info-value-modern {
+    color: var(--text-primary);
+    font-weight: 500;
+    max-width: 60%;
+    text-align: right;
+  }
+
+  /* Badges para tipos de parentesco */
+  .badge-parentesco-conyuge {
+    background: linear-gradient(135deg, #ec4899, #be185d);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .badge-parentesco-hijo {
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .badge-parentesco-padre,
+  .badge-parentesco-madre {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .badge-parentesco-hermano {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .badge-parentesco-otro {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* === ESTILOS BASE HEREDADOS === */
+
+  /* Header del Dashboard */
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-modern.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-modern.btn-xs {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Cards Oscuras */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .card-body-dark {
+    padding: 20px;
+  }
+
+  .card-title-dark {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* Form Controls Oscuros */
+  .form-control-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: var(--card-bg);
+  }
+
+  .form-control-dark::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .form-select-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-select-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-select-dark option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .input-group-text.bg-dark {
+    background: var(--sidebar-hover) !important;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* Avatar Moderno */
+  .avatar-modern-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: white;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  .avatar-modern-md {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .text-muted-dark {
+    color: var(--text-secondary) !important;
+  }
+
+  /* Badges Modernos de Estado */
+  .badge-activo {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-inactivo {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  /* Estado Vacío */
+  .empty-state-dark {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-dark i {
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-dark h6 {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-dark p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .border-dark {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Estilos para el modal de detalles */
+  .familiar-detalles .detalle-seccion {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+
+  .familiar-detalles .detalle-seccion:last-child {
+    border-bottom: none;
+  }
+
+  .seccion-titulo {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .detalle-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+  }
+
+  .detalle-item:last-child {
+    border-bottom: none;
+  }
+
+  .detalle-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .detalle-valor {
+    font-weight: 400;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  .bg-gradient-primary {
+    background: linear-gradient(
+      135deg,
+      var(--primary-color),
+      var(--primary-dark)
+    );
+  }
+
+  /* Variables CSS para colores */
+  :root {
+    --primary-rgb: 59, 130, 246;
+  }
+
+  /* Estilos para las notificaciones personalizadas */
+  #custom-alerts-container {
+    max-width: 400px !important;
+  }
+
+  .custom-alert {
+    max-width: 350px;
+    width: 100% !important;
+    animation: slideInRight 0.3s ease-out;
+    margin-bottom: 0.5rem;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .custom-alert.fade:not(.show) {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Estilos específicos para modo oscuro en modales */
+  [data-theme="dark"] .modal-content {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  [data-theme="dark"] .modal-header {
+    border-bottom-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .modal-footer {
+    border-top-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .form-label {
+    color: var(--text-primary);
+  }
+
+  /* Form labels */
+  .form-label-dark {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Modal styles */
+  .modal-dark {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  .modal-header-dark {
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+
+  .modal-body-dark {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  .modal-footer-dark {
+    background-color: var(--card-bg);
+    border-top: 1px solid var(--border-color);
+  }
+
+  .form-check-dark .form-check-input {
+    background-color: #1c2128;
+    border-color: #30363d;
+  }
+
+  .form-check-dark .form-check-input:checked {
+    background-color: #238636;
+    border-color: #238636;
+  }
+
+  /* Responsive para cards de familiares */
+  @media (max-width: 576px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 50%;
+    }
+
+    .familiar-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+
+    .detalle-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detalle-valor {
+      text-align: left;
+      margin-top: 0.1rem;
+    }
+
+    #custom-alerts-container {
+      padding: 1rem !important;
+      max-width: 300px !important;
+    }
+
+    .custom-alert {
+      max-width: 280px !important;
+    }
+
+    .page-title-wrapper {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 24px;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+
+    #custom-alerts-container {
+      max-width: 250px !important;
+    }
+
+    .custom-alert {
+      max-width: 230px !important;
+    }
+  }
+
+  /* Grid más denso */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+</style>
+
+{% endblock %}

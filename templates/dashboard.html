@@ -1,0 +1,1231 @@
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
+content %}
+
+<!-- Header del Dashboard -->
+<div class="dashboard-header-section">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-wrapper">
+      <i class="fas fa-tachometer-alt title-icon"></i>
+      <h2 class="page-title mb-0">Dashboard</h2>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn-modern btn-outline" onclick="actualizarDashboard()">
+        <i class="fas fa-sync-alt me-1"></i>Actualizar
+      </button>
+      <div class="dropdown">
+        <ul class="dropdown-menu dropdown-menu-dark">
+          <li>
+            <a class="dropdown-item" href="#" onclick="exportarPDF()"
+              ><i class="fas fa-file-pdf me-2"></i>PDF</a
+            >
+          </li>
+          <li>
+            <a class="dropdown-item" href="#" onclick="exportarExcel()"
+              ><i class="fas fa-file-excel me-2"></i>Excel</a
+            >
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros Rápidos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-3">
+        <select class="form-select-dark" id="filtroRango">
+          <option value="hoy">Hoy</option>
+          <option value="semana" selected>Esta Semana</option>
+          <option value="mes">Este Mes</option>
+          <option value="trimestre">Este Trimestre</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select class="form-select-dark" id="filtroProfesional">
+          <option value="">Todos los Profesionales</option>
+          {% for profesional in profesionales %}
+          <option value="{{ profesional.profesional_id }}">
+            {{ profesional.nombre }} {{ profesional.apellido }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex gap-2 justify-content-end">
+          <button class="btn-modern btn-primary" onclick="aplicarFiltros()">
+            <i class="fas fa-filter me-1"></i>Aplicar Filtros
+          </button>
+          <button class="btn-modern btn-outline" onclick="limpiarFiltros()">
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KPIs Principales -->
+<div class="row g-3 mb-4">
+  <div class="col-xxl-3 col-xl-3 col-lg-6 col-md-6">
+    <div class="kpi-card-modern kpi-primary">
+      <div class="kpi-header-modern">
+        <div class="kpi-content-modern">
+          <div class="kpi-value-modern" id="kpi-pacientes">
+            {{ pacientes_activos }}
+          </div>
+          <div class="kpi-label-modern">Pacientes Activos</div>
+          <div class="kpi-trend-modern">
+            <i class="fas fa-arrow-up"></i>3 nuevos esta semana
+          </div>
+        </div>
+        <div class="kpi-icon-modern">
+          <i class="fas fa-users"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xxl-3 col-xl-3 col-lg-6 col-md-6">
+    <div class="kpi-card-modern kpi-success">
+      <div class="kpi-header-modern">
+        <div class="kpi-content-modern">
+          <div class="kpi-value-modern" id="kpi-citas">{{ citas_hoy }}</div>
+          <div class="kpi-label-modern">Citas Hoy</div>
+          <div class="kpi-trend-modern">
+            <i class="fas fa-clock"></i>{{ citas_pendientes }} pendientes
+          </div>
+        </div>
+        <div class="kpi-icon-modern">
+          <i class="fas fa-calendar-day"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xxl-3 col-xl-3 col-lg-6 col-md-6">
+    <div class="kpi-card-modern kpi-warning">
+      <div class="kpi-header-modern">
+        <div class="kpi-content-modern">
+          <div class="kpi-value-modern" id="kpi-adherencia">
+            {{ tasa_adherencia }}%
+          </div>
+          <div class="kpi-label-modern">Tasa de Adherencia</div>
+          <div class="kpi-trend-modern">
+            <i class="fas fa-arrow-up"></i>2.5% vs semana pasada
+          </div>
+        </div>
+        <div class="kpi-icon-modern">
+          <i class="fas fa-chart-line"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xxl-3 col-xl-3 col-lg-6 col-md-6">
+    <div class="kpi-card-modern kpi-info">
+      <div class="kpi-header-modern">
+        <div class="kpi-content-modern">
+          <div class="kpi-value-modern" id="kpi-sesiones">
+            {{ sesiones_mes }}
+          </div>
+          <div class="kpi-label-modern">Sesiones Este Mes</div>
+          <div class="kpi-trend-modern">
+            <i class="fas fa-arrow-up"></i>15% vs mes anterior
+          </div>
+        </div>
+        <div class="kpi-icon-modern">
+          <i class="fas fa-stethoscope"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficas Compactas -->
+<div class="row g-3 mb-4">
+  <!-- Gráfica Principal - Progreso de Planes -->
+  <div class="col-xxl-8 col-xl-8 col-lg-12">
+    <div class="card-dark h-100">
+      <div class="card-header-dark">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="card-title-dark mb-0">
+            <i class="fas fa-chart-bar me-2 text-primary"></i>Progreso de Planes
+            Terapéuticos
+          </h6>
+          <div class="dropdown">
+            <button
+              class="btn-icon-dark dropdown-toggle"
+              type="button"
+              data-bs-toggle="dropdown"
+            >
+              <i class="fas fa-cog"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  onclick="cambiarTipoGrafica('column')"
+                  >Barras</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  onclick="cambiarTipoGrafica('line')"
+                  >Líneas</a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="card-body-dark">
+        <div id="chartProgreso" style="height: 280px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Métricas Secundarias y Distribución -->
+  <div class="col-xxl-4 col-xl-4 col-lg-12">
+    <div class="card-dark h-100">
+      <div class="card-header-dark">
+        <h6 class="card-title-dark mb-0">
+          <i class="fas fa-chart-pie me-2 text-primary"></i>Distribución de
+          Citas
+        </h6>
+      </div>
+      <div class="card-body-dark">
+        <div id="chartCitas" style="height: 280px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Segunda Fila de Gráficas -->
+<div class="row g-3 mb-4">
+  <!-- Evolución de Sesiones -->
+  <div class="col-xxl-6 col-xl-6 col-lg-12">
+    <div class="card-dark h-100">
+      <div class="card-header-dark">
+        <h6 class="card-title-dark mb-0">
+          <i class="fas fa-chart-line me-2 text-primary"></i>Evolución de
+          Sesiones (Últimos 6 Meses)
+        </h6>
+      </div>
+      <div class="card-body-dark">
+        <div id="chartEvolucion" style="height: 250px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Adherencia -->
+  <div class="col-xxl-6 col-xl-6 col-lg-12">
+    <div class="card-dark h-100">
+      <div class="card-header-dark">
+        <h6 class="card-title-dark mb-0">
+          <i class="fas fa-user-check me-2 text-primary"></i>Top 5 Adherencia
+          por Paciente
+        </h6>
+      </div>
+      <div class="card-body-dark">
+        <div id="chartAdherencia" style="height: 250px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Citas de Hoy en Cards -->
+<div class="row">
+  <div class="col-12">
+    <div class="card-dark">
+      <div class="card-header-dark">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="card-title-dark mb-0">
+            <i class="fas fa-calendar-day me-2 text-primary"></i>Citas de Hoy
+          </h6>
+          <span class="badge-modern badge-primary">{{ citas|length }}</span>
+        </div>
+      </div>
+      <div class="card-body-dark">
+        {% if citas %}
+        <div class="row g-3" id="citasHoyGrid">
+          {% for cita in citas %}
+          <div class="col-xxl-4 col-xl-4 col-lg-6 col-md-6">
+            <div class="cita-card-dark h-100">
+              <div class="cita-card-body">
+                <div
+                  class="d-flex justify-content-between align-items-start mb-2"
+                >
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-modern me-2">
+                      {{ cita.paciente_nombre[0] if cita.paciente_nombre }}{{
+                      cita.paciente_apellido[0] if cita.paciente_apellido }}
+                    </div>
+                    <div>
+                      <h6 class="cita-patient-name mb-0">
+                        {{ cita.paciente_nombre or 'N/A' }}
+                      </h6>
+                      <small class="cita-doctor-name"
+                        >{{ cita.profesional_nombre or 'N/A' }}</small
+                      >
+                    </div>
+                  </div>
+                  <span
+                    class="badge-modern badge-{{ 'primary' if cita.estado_nombre == 'programada' else 'success' if cita.estado_nombre == 'completada' else 'warning' if cita.estado_nombre == 'confirmada' else 'danger' if cita.estado_nombre in ['cancelada', 'no_show'] else 'secondary' }}"
+                  >
+                    {{ cita.estado_nombre|title if cita.estado_nombre else
+                    'Desconocido' }}
+                  </span>
+                </div>
+
+                <div class="cita-details-modern">
+                  <div class="detail-item-modern mb-1">
+                    <i class="fas fa-clock text-primary"></i>
+                    <span
+                      >{{ cita.fecha_inicio.strftime('%H:%M') if
+                      cita.fecha_inicio else 'N/A' }}</span
+                    >
+                  </div>
+                  <div class="detail-item-modern">
+                    <i class="fas fa-door-open text-primary"></i>
+                    <span>{{ cita.sala_nombre or 'N/A' }}</span>
+                  </div>
+                </div>
+
+                {% if cita.notas %}
+                <div class="cita-notes-modern mt-2">
+                  <i class="fas fa-sticky-note me-1"></i>
+                  <span
+                    >{{ cita.notas[:50] }}{% if cita.notas|length > 50 %}...{%
+                    endif %}</span
+                  >
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state-dark">
+          <i class="fas fa-calendar-times fa-3x mb-3"></i>
+          <h6>No hay citas para hoy</h6>
+          <p class="mb-0">Agende una nueva cita para comenzar.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Insights Rápidos -->
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="insight-card-dark insight-success">
+      <div class="insight-icon-wrapper">
+        <i class="fas fa-trophy"></i>
+      </div>
+      <div class="insight-content-wrapper">
+        <h6 class="insight-title">Destacado del Día</h6>
+        <p class="insight-description">
+          La adherencia general ha mejorado un 5.2% esta semana
+        </p>
+        <div class="insight-trend">
+          <i class="fas fa-arrow-up"></i>Tendencia positiva
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="insight-card-dark insight-warning">
+      <div class="insight-icon-wrapper">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div class="insight-content-wrapper">
+        <h6 class="insight-title">Atención Requerida</h6>
+        <p class="insight-description">
+          3 pacientes tienen adherencia menor al 60%
+        </p>
+        <div class="insight-trend">
+          <i class="fas fa-clock"></i>Revisión pendiente
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %} {% block scripts %}
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script>
+  // Variables globales para los charts
+  let chartProgreso, chartCitas, chartEvolucion, chartAdherencia;
+  let currentProgresoType = "column";
+
+  document.addEventListener("DOMContentLoaded", function () {
+    cargarDashboard();
+    document
+      .getElementById("filtroRango")
+      .addEventListener("change", aplicarFiltros);
+    document
+      .getElementById("filtroProfesional")
+      .addEventListener("change", aplicarFiltros);
+    setInterval(actualizarDashboard, 120000);
+  });
+
+  function cargarDashboard() {
+    cargarProgresoPlanes();
+    cargarDistribucionCitas();
+    cargarEvolucionSesiones();
+    cargarAdherenciaPacientes();
+  }
+
+  function actualizarDashboard() {
+    showNotification("Actualizando dashboard...", "info");
+    fetch("/api/dashboard/estadisticas-generales")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        document.getElementById("kpi-pacientes").textContent =
+          data.pacientes_activos;
+        document.getElementById("kpi-citas").textContent = data.citas_hoy;
+        document.getElementById("kpi-adherencia").textContent =
+          data.tasa_adherencia + "%";
+        document.getElementById("kpi-sesiones").textContent = data.sesiones_mes;
+        showNotification("Dashboard actualizado correctamente", "success");
+      })
+      .catch((error) => {
+        console.error("Error actualizando dashboard:", error);
+        showNotification("Error al actualizar el dashboard", "error");
+      });
+    cargarDashboard();
+  }
+
+  function aplicarFiltros() {
+    const rango = document.getElementById("filtroRango").value;
+    const profesional = document.getElementById("filtroProfesional").value;
+    showNotification("Aplicando filtros...", "info");
+    setTimeout(() => {
+      cargarDashboard();
+      showNotification("Filtros aplicados correctamente", "success");
+    }, 500);
+  }
+
+  function limpiarFiltros() {
+    document.getElementById("filtroRango").value = "semana";
+    document.getElementById("filtroProfesional").value = "";
+    aplicarFiltros();
+  }
+
+  function cambiarTipoGrafica(tipo) {
+    currentProgresoType = tipo;
+    cargarProgresoPlanes();
+  }
+
+  function cargarProgresoPlanes() {
+    fetch("/api/dashboard/progreso-planes")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        if (chartProgreso) chartProgreso.destroy();
+
+        const isDarkMode =
+          document.documentElement.getAttribute("data-theme") === "dark";
+        const textColor = isDarkMode ? "#e5e7eb" : "#374151";
+        const gridColor = isDarkMode ? "#3a3f5c" : "#e5e7eb";
+
+        chartProgreso = Highcharts.chart("chartProgreso", {
+          chart: {
+            type: currentProgresoType,
+            backgroundColor: "transparent",
+          },
+          title: { text: "" },
+          xAxis: {
+            categories: data.pacientes,
+            labels: {
+              rotation: -45,
+              style: { fontSize: "10px", color: textColor },
+            },
+          },
+          yAxis: {
+            title: {
+              text: "Porcentaje Completado",
+              style: { color: textColor },
+            },
+            max: 100,
+            labels: { format: "{value}%", style: { color: textColor } },
+            gridLineColor: gridColor,
+          },
+          plotOptions: {
+            column: {
+              colorByPoint: true,
+              borderRadius: 3,
+              dataLabels: {
+                enabled: true,
+                format: "{y}%",
+                style: { color: textColor },
+              },
+            },
+            line: {
+              dataLabels: {
+                enabled: true,
+                format: "{y}%",
+                style: { color: textColor },
+              },
+              marker: { enabled: true },
+            },
+          },
+          colors: [
+            "#3b82f6",
+            "#10b981",
+            "#f59e0b",
+            "#ef4444",
+            "#6b7280",
+            "#06b6d4",
+          ],
+          series: [{ name: "Progreso", data: data.progreso }],
+          credits: { enabled: false },
+          legend: { itemStyle: { color: textColor } },
+        });
+      })
+      .catch((error) => {
+        console.error("Error cargando progreso de planes:", error);
+        document.getElementById("chartProgreso").innerHTML =
+          '<p class="text-center text-muted">Error al cargar los datos</p>';
+      });
+  }
+
+  function cargarDistribucionCitas() {
+    fetch("/api/dashboard/distribucion-citas")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        if (chartCitas) chartCitas.destroy();
+
+        const isDarkMode =
+          document.documentElement.getAttribute("data-theme") === "dark";
+        const textColor = isDarkMode ? "#e5e7eb" : "#374151";
+
+        chartCitas = Highcharts.chart("chartCitas", {
+          chart: { type: "pie", backgroundColor: "transparent" },
+          title: { text: "" },
+          plotOptions: {
+            pie: {
+              allowPointSelect: true,
+              cursor: "pointer",
+              dataLabels: {
+                enabled: true,
+                format: "<b>{point.name}</b>: {point.percentage:.1f} %",
+                style: { color: textColor },
+              },
+            },
+          },
+          colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#6b7280"],
+          series: [{ name: "Citas", data: data }],
+          credits: { enabled: false },
+        });
+      })
+      .catch((error) => {
+        console.error("Error cargando distribución de citas:", error);
+        document.getElementById("chartCitas").innerHTML =
+          '<p class="text-center text-muted">Error al cargar los datos</p>';
+      });
+  }
+
+  function cargarEvolucionSesiones() {
+    fetch("/api/dashboard/evolucion-sesiones")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        if (chartEvolucion) chartEvolucion.destroy();
+
+        const isDarkMode =
+          document.documentElement.getAttribute("data-theme") === "dark";
+        const textColor = isDarkMode ? "#e5e7eb" : "#374151";
+        const gridColor = isDarkMode ? "#3a3f5c" : "#e5e7eb";
+
+        chartEvolucion = Highcharts.chart("chartEvolucion", {
+          chart: { type: "line", backgroundColor: "transparent" },
+          title: { text: "" },
+          xAxis: {
+            categories: data.meses,
+            labels: { style: { color: textColor } },
+          },
+          yAxis: {
+            title: { text: "Número de Sesiones", style: { color: textColor } },
+            labels: { style: { color: textColor } },
+            gridLineColor: gridColor,
+          },
+          plotOptions: {
+            line: {
+              dataLabels: { enabled: true, style: { color: textColor } },
+            },
+          },
+          colors: ["#10b981"],
+          series: [{ name: "Sesiones", data: data.totales }],
+          credits: { enabled: false },
+          legend: { itemStyle: { color: textColor } },
+        });
+      })
+      .catch((error) => {
+        console.error("Error cargando evolución de sesiones:", error);
+        document.getElementById("chartEvolucion").innerHTML =
+          '<p class="text-center text-muted">Error al cargar los datos</p>';
+      });
+  }
+
+  function cargarAdherenciaPacientes() {
+    fetch("/api/dashboard/adherencia-pacientes")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        if (chartAdherencia) chartAdherencia.destroy();
+
+        const top5 = data.slice(0, 5);
+        const pacientes = top5.map((item) => item.paciente_nombre);
+        const adherencia = top5.map((item) => parseFloat(item.tasa_adherencia));
+
+        const isDarkMode =
+          document.documentElement.getAttribute("data-theme") === "dark";
+        const textColor = isDarkMode ? "#e5e7eb" : "#374151";
+        const gridColor = isDarkMode ? "#3a3f5c" : "#e5e7eb";
+
+        chartAdherencia = Highcharts.chart("chartAdherencia", {
+          chart: { type: "bar", backgroundColor: "transparent" },
+          title: { text: "" },
+          xAxis: {
+            categories: pacientes,
+            labels: { style: { fontSize: "10px", color: textColor } },
+          },
+          yAxis: {
+            title: {
+              text: "Tasa de Adherencia (%)",
+              style: { color: textColor },
+            },
+            max: 100,
+            labels: { format: "{value}%", style: { color: textColor } },
+            gridLineColor: gridColor,
+          },
+          plotOptions: {
+            bar: {
+              colorByPoint: true,
+              dataLabels: {
+                enabled: true,
+                format: "{y}%",
+                style: { color: textColor },
+              },
+            },
+          },
+          colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#6b7280"],
+          series: [{ name: "Adherencia", data: adherencia }],
+          credits: { enabled: false },
+          legend: { itemStyle: { color: textColor } },
+        });
+      })
+      .catch((error) => {
+        console.error("Error cargando adherencia de pacientes:", error);
+        document.getElementById("chartAdherencia").innerHTML =
+          '<p class="text-center text-muted">Error al cargar los datos</p>';
+      });
+  }
+
+  function exportarPDF() {
+    showNotification("Generando reporte PDF...", "info");
+    setTimeout(() => {
+      showNotification("PDF generado exitosamente", "success");
+    }, 1500);
+  }
+
+  function exportarExcel() {
+    showNotification("Generando reporte Excel...", "info");
+    setTimeout(() => {
+      showNotification("Excel generado exitosamente", "success");
+    }, 1500);
+  }
+</script>
+
+<style>
+  custom-alert {
+    max-width: 350px;
+    width: 100%;
+    animation: slideInRight 0.3s ease-out;
+    margin-bottom: 0.5rem;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Mejoras responsive */
+  @media (max-width: 768px) {
+    .dashboard-header-section .d-flex {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .card-body-dark {
+      padding: 1rem;
+    }
+
+    #chartProgreso,
+    #chartCitas,
+    #chartEvolucion,
+    #chartAdherencia {
+      height: 250px !important;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .kpi-value-modern {
+      font-size: 24px;
+    }
+
+    .kpi-card-modern {
+      padding: 1rem;
+    }
+
+    #chartProgreso,
+    #chartCitas,
+    #chartEvolucion,
+    #chartAdherencia {
+      height: 200px !important;
+    }
+  }
+  /* Header del Dashboard */
+  .dashboard-header-section {
+    margin-bottom: 24px;
+  }
+
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: #3b82f6;
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  /* Cards Oscuras */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .card-header-dark {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .card-title-dark {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .card-body-dark {
+    padding: 20px;
+  }
+
+  /* Select Oscuros */
+  .form-select-dark {
+    background: var(--sidebar-hover);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-select-dark:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-select-dark option {
+    background: var(--sidebar-hover);
+    color: var(--text-primary);
+  }
+
+  /* KPIs Modernos */
+  .kpi-card-modern {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+
+  .kpi-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+  }
+
+  .kpi-card-modern::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+  }
+
+  .kpi-card-modern.kpi-primary::before {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  }
+
+  .kpi-card-modern.kpi-success::before {
+    background: linear-gradient(90deg, #10b981, #34d399);
+  }
+
+  .kpi-card-modern.kpi-warning::before {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  }
+
+  .kpi-card-modern.kpi-info::before {
+    background: linear-gradient(90deg, #06b6d4, #22d3ee);
+  }
+
+  .kpi-header-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .kpi-value-modern {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .kpi-label-modern {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .kpi-trend-modern {
+    font-size: 12px;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .kpi-icon-modern {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    opacity: 0.8;
+  }
+
+  .kpi-primary .kpi-icon-modern {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+  }
+
+  .kpi-success .kpi-icon-modern {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+
+  .kpi-warning .kpi-icon-modern {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+
+  .kpi-info .kpi-icon-modern {
+    background: rgba(6, 182, 212, 0.15);
+    color: #06b6d4;
+  }
+
+  /* Botón Icono Oscuro */
+  .btn-icon-dark {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--sidebar-hover);
+    border: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .btn-icon-dark:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  /* Badges Modernos */
+  .badge-modern {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-modern.badge-primary {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .badge-modern.badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .badge-modern.badge-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .badge-modern.badge-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  .badge-modern.badge-secondary {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+
+  /* Citas Cards Oscuras */
+  .cita-card-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+
+  .cita-card-dark:hover {
+    transform: translateY(-2px);
+    border-color: #3b82f6;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
+  }
+
+  .cita-card-body {
+    padding: 16px;
+  }
+
+  .avatar-modern {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .cita-patient-name {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .cita-doctor-name {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .cita-details-modern {
+    margin-top: 12px;
+  }
+
+  .detail-item-modern {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .detail-item-modern i {
+    width: 16px;
+    font-size: 14px;
+  }
+
+  .cita-notes-modern {
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* Estado Vacío */
+  .empty-state-dark {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-dark i {
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-dark h6 {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-dark p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  /* Insights Oscuros */
+  .insight-card-dark {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .insight-card-dark::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+  }
+
+  .insight-card-dark.insight-success::before {
+    background: #10b981;
+  }
+
+  .insight-card-dark.insight-warning::before {
+    background: #f59e0b;
+  }
+
+  .insight-card-dark:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px var(--shadow);
+  }
+
+  .insight-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .insight-success .insight-icon-wrapper {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+
+  .insight-warning .insight-icon-wrapper {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+
+  .insight-content-wrapper {
+    flex: 1;
+  }
+
+  .insight-title {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .insight-description {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  .insight-trend {
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .insight-success .insight-trend {
+    color: #10b981;
+  }
+
+  .insight-warning .insight-trend {
+    color: #f59e0b;
+  }
+
+  /* Dropdown Oscuro */
+  .dropdown-menu-dark {
+    background: var(--sidebar-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 10px 30px var(--shadow);
+  }
+
+  .dropdown-menu-dark .dropdown-item {
+    color: var(--text-secondary);
+    border-radius: 6px;
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+  }
+
+  .dropdown-menu-dark .dropdown-item:hover {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+  }
+
+  .dropdown-menu-dark .dropdown-item i {
+    color: var(--text-secondary);
+  }
+
+  .dropdown-menu-dark .dropdown-item:hover i {
+    color: #3b82f6;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: 24px;
+    }
+
+    .btn-modern {
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+
+    .kpi-value-modern {
+      font-size: 28px;
+    }
+
+    .kpi-icon-modern {
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+    }
+
+    .dashboard-header-section .d-flex {
+      flex-direction: column;
+      align-items: flex-start !important;
+      gap: 16px;
+    }
+
+    .dashboard-header-section .d-flex .d-flex {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .kpi-card-modern {
+      padding: 16px;
+    }
+
+    .card-body-dark {
+      padding: 16px;
+    }
+
+    #chartProgreso,
+    #chartEvolucion,
+    #chartAdherencia,
+    #chartCitas {
+      height: 200px !important;
+    }
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,1448 @@
+{% extends "base.html" %} {% block title %}Gestión de Citas{% endblock %} {%
+block content %}
+<!-- Contenedor para mensajes personalizados -->
+<div
+  id="custom-alerts-container"
+  class="position-fixed top-0 end-0 p-3"
+  style="z-index: 9999; max-width: 400px"
+></div>
+
+<!-- Modal de confirmación para cancelar cita -->
+<div
+  class="modal fade"
+  id="modalConfirmacionCancelar"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar cancelación</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center">
+          <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+          <p id="confirmacionMensajeCancelar" class="mb-0">
+            ¿Está seguro de cancelar esta cita?
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button
+          type="button"
+          class="btn-modern btn-outline"
+          data-bs-dismiss="modal"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-modern btn-danger"
+          id="btnConfirmarCancelar"
+        >
+          Confirmar Cancelación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+  <div class="page-title-wrapper">
+    <i class="fas fa-calendar-alt title-icon"></i>
+    <h2 class="page-title mb-0">Gestión de Citas</h2>
+  </div>
+  {% if 'admin' in session.user_roles or 'recepcion' in session.user_roles %}
+  <button
+    class="btn-modern btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#modalCita"
+  >
+    <i class="fas fa-plus me-1"></i>Nueva Cita
+  </button>
+  {% endif %}
+</div>
+
+<!-- Filtros y búsqueda compactos -->
+<div class="card-dark mb-4">
+  <div class="card-body-dark py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark"
+            ><i class="fas fa-search"></i
+          ></span>
+          <input
+            type="text"
+            class="form-control-dark form-control-sm"
+            id="searchInput"
+            placeholder="Buscar citas por paciente..."
+          />
+        </div>
+      </div>
+      <div class="col-md-8">
+        <div class="d-flex gap-2 justify-content-end">
+          <!-- Nuevo filtro de fecha -->
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterFecha"
+            style="max-width: 150px"
+          >
+            <option value="hoy">Hoy</option>
+            <option value="todas">Todas</option>
+            <option value="proximas">Próximas</option>
+            <option value="pasadas">Pasadas</option>
+          </select>
+          <select
+            class="form-select-dark form-select-sm"
+            id="filterEstado"
+            style="max-width: 150px"
+          >
+            <option value="todas">Todas</option>
+            <option value="programada">Programadas</option>
+            <option value="completada">Completadas</option>
+            <option value="cancelada">Canceladas</option>
+          </select>
+          <button
+            class="btn-modern btn-outline btn-sm"
+            id="btnResetFilters"
+            title="Restablecer filtros"
+          >
+            <i class="fas fa-redo"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de Cards Compactas para Citas -->
+<div class="row g-3" id="cardsContainer">
+  {% for cita in citas %}
+  <div
+    class="col-xxl-4 col-xl-4 col-lg-6 col-md-6 col-sm-6 fade-in cita-card"
+    data-estado="{{ cita.estado_nombre }}"
+    data-paciente="{{ cita.paciente_nombre }} {{ cita.paciente_apellido }}"
+    data-fecha="{{ cita.fecha_inicio.strftime('%Y-%m-%d') if cita.fecha_inicio else '' }}"
+  >
+    <div class="card-dark h-100 cita-card-modern">
+      <div class="card-body-dark p-3">
+        <!-- Header compacto con información principal -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center" style="min-width: 0; flex: 1">
+            <div class="avatar-modern-sm me-2 flex-shrink-0">
+              {{ cita.paciente_nombre[0] if cita.paciente_nombre }}{{
+              cita.paciente_apellido[0] if cita.paciente_apellido }}
+            </div>
+            <div style="min-width: 0; flex: 1">
+              <h6 class="card-title-dark mb-0 text-truncate">
+                {{ cita.paciente_nombre }} {{ cita.paciente_apellido }}
+              </h6>
+              <small class="text-muted-dark">ID: #{{ cita.cita_id }}</small>
+            </div>
+          </div>
+          <span
+            class="badge-modern badge-{{ 'success' if cita.estado_nombre == 'completada' else 'warning' if cita.estado_nombre == 'programada' else 'danger' if cita.estado_nombre == 'cancelada' else 'secondary' }} flex-shrink-0"
+          >
+            {{ cita.estado_nombre|title if cita.estado_nombre else 'Desconocido'
+            }}
+          </span>
+        </div>
+
+        <!-- Información de la cita -->
+        <div class="cita-info-modern mb-2">
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-user-md me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark"
+              >{{ cita.profesional_nombre }} {{ cita.profesional_apellido
+              }}</small
+            >
+          </div>
+          <div class="info-item-modern mb-1">
+            <i
+              class="fas fa-door-open me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark">{{ cita.sala_nombre }}</small>
+          </div>
+          <div class="info-item-modern">
+            <i
+              class="fas fa-clock me-1 text-primary"
+              style="font-size: 0.8rem"
+            ></i>
+            <small class="text-muted-dark">
+              {{ cita.fecha_inicio.strftime('%H:%M') if cita.fecha_inicio else
+              '' }} - {{ cita.fecha_fin.strftime('%H:%M') if cita.fecha_fin else
+              '' }}
+            </small>
+          </div>
+        </div>
+
+        <!-- Fecha destacada -->
+        <div
+          class="fecha-destacada text-center py-1 mb-2 rounded"
+          style="background-color: rgba(var(--primary-rgb), 0.1)"
+        >
+          <small class="text-primary fw-bold">
+            {{ cita.fecha_inicio.strftime('%d/%m/%Y') if cita.fecha_inicio else
+            'N/A' }}
+          </small>
+        </div>
+
+        <!-- Acciones compactas -->
+        <div class="d-flex justify-content-between pt-2 border-top border-dark">
+          <button
+            class="btn-modern btn-outline btn-xs btn-ver-cita"
+            data-cita-id="{{ cita.cita_id }}"
+            title="Ver detalles"
+          >
+            <i class="fas fa-eye"></i>
+          </button>
+          {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles %}
+          <div class="btn-group btn-group-sm">
+            <button
+              class="btn-modern btn-outline btn-xs btn-editar-cita"
+              data-cita-id="{{ cita.cita_id }}"
+              title="Editar"
+            >
+              <i class="fas fa-edit"></i>
+            </button>
+            <button
+              class="btn-modern btn-outline btn-xs btn-cancelar-cita"
+              data-cita-id="{{ cita.cita_id }}"
+              data-estado-actual="{{ cita.estado_nombre }}"
+              title="Cancelar cita"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card-dark text-center py-4">
+      <div class="card-body-dark">
+        <div class="empty-state-dark">
+          <i class="fas fa-calendar-times fa-2x mb-3"></i>
+          <h6>No hay citas</h6>
+          <p class="mb-2">Agende una nueva cita para comenzar.</p>
+          {% if 'admin' in session.user_roles or 'recepcion' in
+          session.user_roles %}
+          <button
+            class="btn-modern btn-primary mt-1"
+            data-bs-toggle="modal"
+            data-bs-target="#modalCita"
+          >
+            <i class="fas fa-plus me-1"></i>Agendar Primera Cita
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Contador de citas -->
+<div class="mt-3 text-end">
+  <small class="text-muted-dark">
+    Mostrando <span id="contadorCitas">{{ citas|length }}</span> cita(s)
+    <span id="filtroActual">de hoy</span>
+  </small>
+</div>
+
+<!-- Modal para nueva cita -->
+<div class="modal fade" id="modalCita" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Nueva Cita</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form
+        method="POST"
+        action="{{ url_for('citas.agendar_cita') }}"
+        id="formCita"
+      >
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select-dark" name="paciente_id" required>
+                  <option value="">Seleccionar paciente...</option>
+                  {% for paciente in pacientes %}
+                  <option value="{{ paciente.paciente_id }}">
+                    {{ paciente.nombre }} {{ paciente.apellido }}
+                  </option>
+                  {% else %}
+                  <option value="" disabled>
+                    No hay pacientes disponibles
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Profesional *</label>
+                <select class="form-select-dark" name="profesional_id" required>
+                  <option value="">Seleccionar profesional...</option>
+                  {% for profesional in profesionales %}
+                  <option value="{{ profesional.profesional_id }}">
+                    {{ profesional.nombre }} {{ profesional.apellido }}
+                  </option>
+                  {% else %}
+                  <option value="" disabled>
+                    No hay profesionales disponibles
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Sala *</label>
+                <select class="form-select-dark" name="sala_id" required>
+                  <option value="">Seleccionar sala...</option>
+                  {% for sala in salas %}
+                  <option value="{{ sala.sala_id }}">{{ sala.nombre }}</option>
+                  {% else %}
+                  <option value="" disabled>No hay salas disponibles</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Fecha y Hora Inicio *</label>
+                <input
+                  type="datetime-local"
+                  class="form-control-dark"
+                  name="fecha_inicio"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Fecha y Hora Fin *</label>
+                <input
+                  type="datetime-local"
+                  class="form-control-dark"
+                  name="fecha_fin"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Agendar Cita
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles de cita -->
+<div class="modal fade" id="modalVerCita" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-calendar-alt me-2"></i>Detalles de la Cita
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body p-0" id="detallesCita">
+        <!-- Los detalles se cargarán aquí via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para editar cita -->
+<div class="modal fade" id="modalEditarCita" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Cita</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form method="POST" action="" id="formEditarCita">
+        <div class="modal-body" id="formEditarCitaBody">
+          <!-- El formulario se cargará aquí via AJAX -->
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-primary">
+            <i class="fas fa-save me-2"></i>Actualizar Cita
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para cancelar cita con motivo -->
+<div class="modal fade" id="modalCancelarCita" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-times me-2"></i>Cancelar Cita
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <form method="POST" action="" id="formCancelarCita">
+        <input type="hidden" name="cita_id" id="citaIdCancelar" />
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Motivo de cancelación *</label>
+            <select class="form-select-dark" name="motivo_id" required>
+              <option value="">Seleccionar motivo...</option>
+              {% for motivo in motivos %}
+              <option value="{{ motivo.motivo_id }}">
+                {{ motivo.descripcion }}
+              </option>
+              {% else %}
+              <option value="" disabled>No hay motivos disponibles</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn-modern btn-outline"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn-modern btn-danger">
+            <i class="fas fa-times me-2"></i>Confirmar Cancelación
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // Variables globales para manejar la confirmación
+  let citaCancelarActual = null;
+  let botonCancelarActual = null;
+
+  // Función para mostrar notificaciones personalizadas
+  function showNotification(message, type) {
+    const container = document.getElementById("custom-alerts-container");
+    if (!container) {
+      console.error("No se encontró el contenedor de alertas");
+      return;
+    }
+
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${
+      type === "error" ? "danger" : "success"
+    } alert-dismissible fade show custom-alert mb-2`;
+    alertDiv.style.maxWidth = "350px";
+    alertDiv.style.width = "100%";
+    alertDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+    alertDiv.style.border = "none";
+    alertDiv.style.borderRadius = "8px";
+    alertDiv.style.fontSize = "0.875rem";
+
+    const icon = type === "error" ? "exclamation-triangle" : "check-circle";
+    const title = type === "error" ? "Error" : "Éxito";
+
+    alertDiv.innerHTML = `
+      <div class="d-flex align-items-start">
+        <i class="fas fa-${icon} mt-1 me-2 ${
+      type === "error" ? "text-danger" : "text-success"
+    }" style="flex-shrink: 0;"></i>
+        <div class="flex-grow-1" style="min-width: 0;">
+          <strong class="d-block mb-1">${title}</strong>
+          <span class="notification-message" style="word-wrap: break-word;">${message}</span>
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close" style="flex-shrink: 0;"></button>
+      </div>
+    `;
+
+    container.insertBefore(alertDiv, container.firstChild);
+
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+      }
+    }, 5000);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("Cargando citas...");
+
+    // Configurar fechas por defecto en el modal de nueva cita
+    const now = new Date();
+    const startDateTime = new Date(now.getTime() + 60 * 60 * 1000);
+    const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+
+    document.querySelector('input[name="fecha_inicio"]').value = formatarParaDateTimeLocal(startDateTime);
+    document.querySelector('input[name="fecha_fin"]').value = formatarParaDateTimeLocal(endDateTime);
+
+    // Manejar el botón de ver detalles de cita
+    document.querySelectorAll(".btn-ver-cita").forEach((button) => {
+      button.addEventListener("click", function () {
+        const citaId = this.getAttribute("data-cita-id");
+        console.log("Ver cita:", citaId);
+        cargarDetallesCita(citaId);
+      });
+    });
+
+    // Manejar el botón de editar cita
+    document.querySelectorAll(".btn-editar-cita").forEach((button) => {
+      button.addEventListener("click", function () {
+        const citaId = this.getAttribute("data-cita-id");
+        console.log("Editar cita:", citaId);
+        cargarFormularioEdicionCita(citaId);
+      });
+    });
+
+    // Manejar el botón de cancelar cita
+    document.querySelectorAll(".btn-cancelar-cita").forEach((button) => {
+      button.addEventListener("click", function () {
+        const citaId = this.getAttribute("data-cita-id");
+        const estadoActual = this.getAttribute("data-estado-actual");
+
+        if (estadoActual === "cancelada") {
+          showNotification("Esta cita ya está cancelada", "error");
+          return;
+        }
+
+        // Guardar los datos para usar en la confirmación
+        citaCancelarActual = citaId;
+        botonCancelarActual = this;
+
+        // Mostrar modal de confirmación
+        mostrarModalConfirmacionCancelar();
+      });
+    });
+
+    // Configurar el botón de confirmar cancelación
+    document
+      .getElementById("btnConfirmarCancelar")
+      .addEventListener("click", function () {
+        if (citaCancelarActual) {
+          // Cerrar el modal de confirmación
+          const modalConfirmacion = bootstrap.Modal.getInstance(
+            document.getElementById("modalConfirmacionCancelar")
+          );
+          modalConfirmacion.hide();
+
+          // Mostrar el modal con el formulario de motivo
+          document.getElementById("citaIdCancelar").value = citaCancelarActual;
+          document.getElementById("formCancelarCita").action = `/citas/cancelar/${citaCancelarActual}`;
+
+          const modalCancelar = new bootstrap.Modal(
+            document.getElementById("modalCancelarCita")
+          );
+          modalCancelar.show();
+        }
+      });
+
+    // Filtros y búsqueda para citas
+    const searchInput = document.getElementById("searchInput");
+    const filterEstado = document.getElementById("filterEstado");
+    const filterFecha = document.getElementById("filterFecha"); // Nuevo filtro de fecha
+    const btnResetFilters = document.getElementById("btnResetFilters");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", filtrarCitas);
+    }
+
+    if (filterEstado) {
+      filterEstado.addEventListener("change", filtrarCitas);
+    }
+
+    if (filterFecha) {
+      filterFecha.addEventListener("change", filtrarCitas);
+    }
+
+    if (btnResetFilters) {
+      btnResetFilters.addEventListener("click", resetearFiltros);
+    }
+
+    // Inicializar filtros
+    filtrarCitas();
+  });
+
+  function mostrarModalConfirmacionCancelar() {
+    document.getElementById("confirmacionMensajeCancelar").textContent =
+      "¿Está seguro de cancelar esta cita? Esta acción no se puede deshacer.";
+
+    const modal = new bootstrap.Modal(
+      document.getElementById("modalConfirmacionCancelar")
+    );
+    modal.show();
+  }
+
+  function filtrarCitas() {
+    const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+    const estadoFiltro = document.getElementById("filterEstado").value;
+    const fechaFiltro = document.getElementById("filterFecha").value;
+    const hoy = new Date().toISOString().split('T')[0]; // Fecha actual en formato YYYY-MM-DD
+    let contador = 0;
+
+    // Actualizar texto del filtro actual
+    const filtroActual = document.getElementById("filtroActual");
+    let textoFiltro = "";
+
+    switch(fechaFiltro) {
+      case "hoy":
+        textoFiltro = "de hoy";
+        break;
+      case "todas":
+        textoFiltro = "en total";
+        break;
+      case "proximas":
+        textoFiltro = "próximas";
+        break;
+      case "pasadas":
+        textoFiltro = "pasadas";
+        break;
+    }
+    filtroActual.textContent = textoFiltro;
+
+    document.querySelectorAll(".cita-card").forEach((card) => {
+      const paciente = card.getAttribute("data-paciente").toLowerCase();
+      const estado = card.getAttribute("data-estado");
+      const fechaCita = card.getAttribute("data-fecha");
+
+      const coincidePaciente = paciente.includes(searchTerm);
+      const coincideEstado = estadoFiltro === "todas" || estado === estadoFiltro;
+
+      // Filtro por fecha
+      let coincideFecha = true;
+      if (fechaFiltro === "hoy") {
+        coincideFecha = fechaCita === hoy;
+      } else if (fechaFiltro === "proximas") {
+        coincideFecha = fechaCita >= hoy;
+      } else if (fechaFiltro === "pasadas") {
+        coincideFecha = fechaCita < hoy;
+      }
+      // Para "todas" no aplicamos filtro de fecha
+
+      if (coincidePaciente && coincideEstado && coincideFecha) {
+        card.style.display = "block";
+        contador++;
+      } else {
+        card.style.display = "none";
+      }
+    });
+
+    document.getElementById("contadorCitas").textContent = contador;
+  }
+
+  function resetearFiltros() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("filterEstado").value = "todas";
+    document.getElementById("filterFecha").value = "hoy";
+    filtrarCitas();
+  }
+
+  function cargarDetallesCita(citaId) {
+    fetch(`/api/citas/${citaId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((cita) => {
+        console.log("Cita cargada:", cita);
+        const modalBody = document.getElementById("detallesCita");
+
+        const fechaInicio = cita.fecha_inicio ? new Date(cita.fecha_inicio) : null;
+        const fechaFin = cita.fecha_fin ? new Date(cita.fecha_fin) : null;
+
+        modalBody.innerHTML = `
+          <div class="cita-detalles">
+            <!-- Header con información principal -->
+            <div class="cita-header p-4" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white;">
+              <div class="d-flex align-items-center">
+                <div class="avatar-modern-md me-3">
+                  ${cita.paciente_nombre ? cita.paciente_nombre[0] : ""}${cita.paciente_apellido ? cita.paciente_apellido[0] : ""}
+                </div>
+                <div>
+                  <h4 class="mb-1">${cita.paciente_nombre || "N/A"} ${cita.paciente_apellido || ""}</h4>
+                  <p class="mb-0 opacity-75">Cita ID: #${cita.cita_id || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cuerpo de detalles -->
+            <div class="p-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-info-circle me-2"></i>Información de la Cita
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Profesional:</span>
+                      <span class="detalle-valor">${cita.profesional_nombre || "N/A"} ${cita.profesional_apellido || ""}</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Sala:</span>
+                      <span class="detalle-valor">${cita.sala_nombre || "N/A"}</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Estado:</span>
+                      <span class="detalle-valor">
+                        <span class="badge-modern badge-${
+                          cita.estado_nombre === "completada" ? "success" :
+                          cita.estado_nombre === "programada" ? "warning" :
+                          cita.estado_nombre === "cancelada" ? "danger" : "secondary"
+                        }">
+                          ${cita.estado_nombre || "Desconocido"}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="detalle-seccion mb-4">
+                    <h6 class="seccion-titulo mb-3">
+                      <i class="fas fa-clock me-2"></i>Horario
+                    </h6>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Fecha:</span>
+                      <span class="detalle-valor">${fechaInicio ? formatDate(fechaInicio) : "N/A"}</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Hora Inicio:</span>
+                      <span class="detalle-valor">${fechaInicio ? formatTime(fechaInicio) : "N/A"}</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="detalle-label">Hora Fin:</span>
+                      <span class="detalle-valor">${fechaFin ? formatTime(fechaFin) : "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById("modalVerCita"));
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar los detalles de la cita", "error");
+      });
+  }
+
+  function cargarFormularioEdicionCita(citaId) {
+    fetch(`/api/citas/${citaId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then((cita) => {
+        console.log("Cita para editar:", cita);
+
+        const fechaInicio = cita.fecha_inicio ? formatarParaDateTimeLocal(new Date(cita.fecha_inicio)) : "";
+        const fechaFin = cita.fecha_fin ? formatarParaDateTimeLocal(new Date(cita.fecha_fin)) : "";
+
+        const modalBody = document.getElementById("formEditarCitaBody");
+        modalBody.innerHTML = `
+          <input type="hidden" name="cita_id" value="${cita.cita_id || ""}">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Paciente *</label>
+                <select class="form-select-dark" name="paciente_id" required>
+                  <option value="">Seleccionar paciente...</option>
+                  {% for paciente in pacientes %}
+                  <option value="{{ paciente.paciente_id }}" ${cita.paciente_id == {{ paciente.paciente_id }} ? "selected" : ""}>
+                    {{ paciente.nombre }} {{ paciente.apellido }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Profesional *</label>
+                <select class="form-select-dark" name="profesional_id" required>
+                  <option value="">Seleccionar profesional...</option>
+                  {% for profesional in profesionales %}
+                  <option value="{{ profesional.profesional_id }}" ${cita.profesional_id == {{ profesional.profesional_id }} ? "selected" : ""}>
+                    {{ profesional.nombre }} {{ profesional.apellido }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Sala *</label>
+                <select class="form-select-dark" name="sala_id" required>
+                  <option value="">Seleccionar sala...</option>
+                  {% for sala in salas %}
+                  <option value="{{ sala.sala_id }}" ${cita.sala_id == {{ sala.sala_id }} ? "selected" : ""}>{{ sala.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Fecha y Hora Inicio *</label>
+                <input type="datetime-local" class="form-control-dark" name="fecha_inicio" value="${fechaInicio}" required>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Fecha y Hora Fin *</label>
+                <input type="datetime-local" class="form-control-dark" name="fecha_fin" value="${fechaFin}" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Estado</label>
+                <select class="form-select-dark" name="estado_id">
+                  {% for estado in estados_cita %}
+                  <option value="{{ estado.estado_id }}" ${cita.estado_id == {{ estado.estado_id }} ? "selected" : ""}>
+                    {{ estado.nombre|title }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById("formEditarCita").action = `/citas/editar/${citaId}`;
+        const modal = new bootstrap.Modal(document.getElementById("modalEditarCita"));
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        showNotification("Error al cargar el formulario de edición", "error");
+      });
+  }
+
+  // Función para formatear fecha para input datetime-local
+  function formatarParaDateTimeLocal(date) {
+    if (!date) return "";
+    try {
+      return date.toISOString().slice(0, 16);
+    } catch (e) {
+      console.error("Error formateando fecha:", e);
+      return "";
+    }
+  }
+
+  // Funciones auxiliares para formateo de fechas
+  function formatDate(date) {
+    return date.toLocaleDateString("es-ES");
+  }
+
+  function formatTime(date) {
+    return date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // Manejar el envío del formulario de edición de cita
+  document.addEventListener("DOMContentLoaded", function () {
+    const formEditar = document.getElementById("formEditarCita");
+    if (formEditar) {
+      formEditar.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+
+        // Mostrar loading
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
+        submitButton.disabled = true;
+
+        fetch(this.action, {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Error en la respuesta del servidor");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              showNotification(data.message, "success");
+              // Cerrar el modal
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalEditarCita")
+              );
+              modal.hide();
+              // Recargar la página después de un breve delay
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              throw new Error(data.error || "Error al actualizar la cita");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showNotification("Error al actualizar la cita: " + error.message, "error");
+            // Restaurar botón
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+          });
+      });
+    }
+
+    // Manejar el envío del formulario de cancelación
+    const formCancelar = document.getElementById("formCancelarCita");
+    if (formCancelar) {
+      formCancelar.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+
+        // Mostrar loading
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cancelando...';
+        submitButton.disabled = true;
+
+        fetch(this.action, {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Error en la respuesta del servidor");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              showNotification(data.message, "success");
+              // Cerrar el modal
+              const modal = bootstrap.Modal.getInstance(
+                document.getElementById("modalCancelarCita")
+              );
+              modal.hide();
+              // Recargar la página después de un breve delay
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              throw new Error(data.error || "Error al cancelar la cita");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showNotification("Error al cancelar la cita: " + error.message, "error");
+            // Restaurar botón
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+          });
+      });
+    }
+  });
+</script>
+
+<style>
+  /* === ESTILOS BASE HEREDADOS DE PACIENTES === */
+
+  /* Header del Dashboard */
+  .page-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .title-icon {
+    color: var(--primary-color);
+    font-size: 24px;
+  }
+
+  .page-title {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  /* Botones Modernos */
+  .btn-modern {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Inter", sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-modern.btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-modern.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-modern.btn-danger {
+    background: #dc3545;
+    color: white;
+  }
+
+  .btn-modern.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+  }
+
+  .btn-modern.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+  }
+
+  .btn-modern.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .btn-modern.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-modern.btn-xs {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Cards Oscuras */
+  .card-dark {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .card-body-dark {
+    padding: 20px;
+  }
+
+  .card-title-dark {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* Form Controls Oscuros */
+  .form-control-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-control-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: var(--card-bg);
+  }
+
+  .form-control-dark::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .form-select-dark {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .form-select-dark:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-select-dark option {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .input-group-text.bg-dark {
+    background: var(--sidebar-hover) !important;
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+  }
+
+  /* Avatar Moderno */
+  .avatar-modern-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    background: linear-gradient(
+      135deg,
+      var(--primary-color),
+      var(--primary-dark)
+    );
+    color: white;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+
+  .avatar-modern-md {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .text-muted-dark {
+    color: var(--text-secondary) !important;
+  }
+
+  /* Badges Modernos */
+  .badge-modern {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-modern.badge-primary {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .badge-modern.badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .badge-modern.badge-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .badge-modern.badge-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  .badge-modern.badge-secondary {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+
+  /* Estado Vacío */
+  .empty-state-dark {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state-dark i {
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  .empty-state-dark h6 {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-dark p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  /* === ESTILOS ESPECÍFICOS PARA CITAS === */
+
+  .cita-card-modern {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  .cita-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px var(--shadow);
+    border-color: var(--primary-color);
+  }
+
+  .cita-info-modern .info-item-modern {
+    display: flex;
+    align-items: center;
+  }
+
+  .fecha-destacada {
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
+  }
+
+  .border-dark {
+    border-color: var(--border-color) !important;
+  }
+
+  /* Estilos para el modal de detalles de cita */
+  .cita-detalles .detalle-seccion {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+  }
+
+  .cita-detalles .detalle-seccion:last-child {
+    border-bottom: none;
+  }
+
+  .seccion-titulo {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .detalle-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+  }
+
+  .detalle-item:last-child {
+    border-bottom: none;
+  }
+
+  .detalle-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .detalle-valor {
+    font-weight: 400;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  /* Variables CSS para colores */
+  :root {
+    --primary-rgb: 59, 130, 246;
+  }
+
+  /* Estilos para las notificaciones personalizadas */
+  #custom-alerts-container {
+    max-width: 400px !important;
+  }
+
+  .custom-alert {
+    max-width: 350px;
+    width: 100% !important;
+    animation: slideInRight 0.3s ease-out;
+    margin-bottom: 0.5rem;
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .custom-alert.fade:not(.show) {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Estilos específicos para modo oscuro en modales */
+  [data-theme="dark"] .modal-content {
+    background-color: var(--content-bg);
+    color: var(--text-primary);
+  }
+
+  [data-theme="dark"] .modal-header {
+    border-bottom-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .modal-footer {
+    border-top-color: var(--border-color);
+  }
+
+  [data-theme="dark"] .form-label {
+    color: var(--text-primary);
+  }
+
+  /* Responsive para cards de citas */
+  @media (max-width: 576px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 50%;
+    }
+
+    .cita-card-modern .card-body-dark {
+      padding: 0.75rem;
+    }
+
+    .avatar-modern-sm {
+      width: 32px;
+      height: 32px;
+      font-size: 0.7rem;
+    }
+
+    .detalle-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .detalle-valor {
+      text-align: left;
+      margin-top: 0.1rem;
+    }
+
+    #custom-alerts-container {
+      padding: 1rem !important;
+      max-width: 300px !important;
+    }
+
+    .custom-alert {
+      max-width: 280px !important;
+    }
+
+    .page-title-wrapper {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .page-title {
+      font-size: 24px;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .col-sm-6 {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+
+    #custom-alerts-container {
+      max-width: 250px !important;
+    }
+
+    .custom-alert {
+      max-width: 230px !important;
+    }
+  }
+
+  /* Grid más denso */
+  .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+</style>
+{% endblock %}
