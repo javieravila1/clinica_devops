@@ -1,7 +1,6 @@
 pipeline {
 agent any
 
-```
 environment {
     APP_NAME       = 'clinica-paliativos'
     SONAR_TOKEN    = credentials('sonar-token')
@@ -153,6 +152,5 @@ post {
         echo 'Pipeline falló - revisar logs'
     }
 }
-```
 
 }
