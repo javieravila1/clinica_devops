@@ -83,10 +83,10 @@ stages {
     stage('Deploy for Security Scan') {
         steps {
             sh '''
-            docker compose -f docker-compose.yml up -d db
+            docker-compose -f docker-compose.yml up -d db
             sleep 20
 
-            docker compose -f docker-compose.yml up -d web
+            docker-compose -f docker-compose.yml up -d web
             sleep 15
             '''
         }
@@ -131,7 +131,7 @@ stages {
 
         steps {
             sh '''
-            docker compose -f docker-compose.yml \
+            docker-compose -f docker-compose.yml \
             up -d --force-recreate web
             '''
         }
@@ -140,7 +140,7 @@ stages {
 
 post {
     always {
-        sh 'docker compose -f docker-compose.yml down || true'
+        sh 'docker-compose -f docker-compose.yml down || true'
         cleanWs()
     }
 

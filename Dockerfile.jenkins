@@ -5,18 +5,18 @@ USER root
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
-    python3-venv \
     python3-dev \
     build-essential \
     pkg-config \
     default-libmysqlclient-dev \
+    git \
     docker.io \
     docker-compose \
-    git \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
+RUN groupadd -f docker
 RUN usermod -aG docker jenkins
 
-USER jenkins
+USER root
