@@ -51,7 +51,7 @@ def ejecutar_procedimiento_multiple(proc_name, params=None):
             try:
                 resultado = cur.fetchall()
                 resultados.append(resultado)
-            except:
+            except Exception:
                 break
                 
         return resultados

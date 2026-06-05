@@ -446,7 +446,7 @@ def api_evolucion_sesiones():
             for i in range(6):
                 month = datetime.now() - timedelta(days=30*i)
                 meses.append(month.strftime('%b %Y'))
-                totales.append(20 + i*5)
+                totales.append(20 + i * 5)  
             meses.reverse()
             totales.reverse()
         
@@ -466,7 +466,7 @@ def api_evolucion_sesiones():
         for i in range(6):
             month = datetime.now() - timedelta(days=30*i)
             meses.append(month.strftime('%b %Y'))
-            totales.append(20 + i*5)
+            totales.append(20 + i * 5)
         meses.reverse()
         totales.reverse()
         
