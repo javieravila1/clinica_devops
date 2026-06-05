@@ -1741,11 +1741,10 @@ LOCK TABLES `usuarios` WRITE;
 /*!40000 ALTER TABLE `usuarios` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `usuarios` VALUES
-(1,'admin','$2b$12$LQv3c1yqBWVHxkd5L.eCDeoNGnz7FCK5h9.8R2L7GYsAm7D5E6W6','admin@clinica.com',NULL,'admin',26,'2025-11-24 17:33:37','2025-10-30 16:17:36'),
-(2,'Juan','$2b$12$LQv3c1yqBWVHxkd5L.eCDeoNGnz7FCK5h9.8R2L7GYsAm7D5E6W6','profesional@clinica.com',NULL,'profesional',26,'2025-11-24 06:08:27','2025-10-31 01:39:28'),
-(3,'Alfredo','$2b$12$LQv3c1yqBWVHxkd5L.eCDeoNGnz7FCK5h9.8R2L7GYsAm7D5E6W6','alfredo@clinica.com',NULL,'paciente',26,'2025-11-24 06:22:52','2025-10-31 01:42:35'),
-(9,'tapellido1','scrypt:32768:8:1$yGnUmPdFx06letsy$6dff2d3097921400bef185c1e2d2a3f9dca2be1b39d46ebc7e14128907a88bae5cce609f70045b401ee8b6d2c2f7ff71afe1bb5a5caef9a2638036d679bd54ab','ruluv@mailinator.com',10,'paciente',26,'2025-11-24 17:56:09','2025-11-24 17:40:20');
-/*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;
+(1,'admin','$2a$10$K29MC4VLANEiqGOK8Aw9V.JUgyS.cFhoFz.oO2Irn7yo7xGLGiIS.','admin@clinica.com',NULL,'admin',26,'2025-11-24 17:33:37','2025-10-30 16:17:36'),
+(2,'Juan','$2a$10$K29MC4VLANEiqGOK8Aw9V.JUgyS.cFhoFz.oO2Irn7yo7xGLGiIS.','profesional@clinica.com',NULL,'profesional',26,'2025-11-24 06:08:27','2025-10-31 01:39:28'),
+(3,'Alfredo','$2a$10$K29MC4VLANEiqGOK8Aw9V.JUgyS.cFhoFz.oO2Irn7yo7xGLGiIS.','alfredo@clinica.com',NULL,'paciente',26,'2025-11-24 06:22:52','2025-10-31 01:42:35'),
+(9,'tapellido1','$2a$10$K29MC4VLANEiqGOK8Aw9V.JUgyS.cFhoFz.oO2Irn7yo7xGLGiIS.','ruluv@mailinator.com',10,'paciente',26,'2025-11-24 17:56:09','2025-11-24 17:40:20');/*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
 

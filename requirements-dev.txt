@@ -1,4 +1,13 @@
-pytest>=7.4.0
-pytest-cov>=4.1.0
-pytest-mock>=3.11.1
-Flask-Testing>=0.8.1
+Flask
+flask-mysqldb
+PyMySQL
+bcrypt
+pytest
+pytest-cov
+pytest-mock
+pytest-flask
+coverage
+flake8
+bandit
+safety
+requests

@@ -10,8 +10,7 @@ services:
       MYSQL_PASSWORD: 666
     volumes:
       - db_data:/var/lib/mysql
-      - ./clinica_paliativos_final.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ./procedures_all.sql:/docker-entrypoint-initdb.d/02_procedures.sql:ro
+      - ./backup_completo.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     ports:
       - "3306:3306"
 
