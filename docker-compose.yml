@@ -6,7 +6,7 @@ services:
   db:
     image: mariadb:10.11
     container_name: paliativos-db
-    restart: unless-stopped
+    restart: no
     environment:
       MARIADB_ROOT_PASSWORD: rootpassword
       MARIADB_DATABASE: clinica_paliativos
@@ -35,7 +35,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: paliativos-backend
-    restart: unless-stopped
+    restart: no
     depends_on:
       db:
         condition: service_healthy
@@ -62,7 +62,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: paliativos-frontend
-    restart: unless-stopped
+    restart: no
     depends_on:
       - backend
     ports:
