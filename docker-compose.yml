@@ -1,39 +1,81 @@
 services:
+
+  # ─────────────────────────────────────────
+  # BASE DE DATOS — MySQL 5.7
+  # ─────────────────────────────────────────
   db:
-    image: mysql:5.7
+    image: mariadb:10.11
     container_name: paliativos-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: clinica_paliativos
-      MYSQL_USER: paliativos_user
-      MYSQL_PASSWORD: 666
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: clinica_paliativos
+      MARIADB_USER: paliativos_user
+      MARIADB_PASSWORD: 666
     volumes:
       - db_data:/var/lib/mysql
-      - ./clinica_paliativos_final.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-      - ./procedures_all.sql:/docker-entrypoint-initdb.d/02_procedures.sql:ro
+      - ./database/clinica_paliativos_final.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      # - ./database/procedures_all.sql:/docker-entrypoint-initdb.d/02_procedures.sql:ro
     ports:
       - "3306:3306"
+    networks:
+      - clinica-net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  web:
-    build: .
-    container_name: paliativos-web
+  # ─────────────────────────────────────────
+  # BACKEND — Flask / Python
+  # ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: paliativos-backend
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       FLASK_ENV: development
       SECRET_KEY: clave_secreta_paliativos_2024
       MYSQL_HOST: db
       MYSQL_PORT: 3306
-      MYSQL_USER: paliativos_user 
+      MYSQL_USER: paliativos_user
       MYSQL_PASSWORD: 666
       MYSQL_DB: clinica_paliativos
-    ports:
-      - "5000:5000"
     volumes:
-      - .:/app
-    command: ["python", "app.py"]
+      - ./backend:/app          # hot-reload en desarrollo
+    networks:
+      - clinica-net
+    expose:
+      - "5000"                  # solo visible internamente; Nginx hace el proxy
+
+  # ─────────────────────────────────────────
+  # FRONTEND — Nginx (estáticos + reverse proxy)
+  # ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: paliativos-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"                 # punto de entrada público
+    networks:
+      - clinica-net
+
+# ─────────────────────────────────────────
+# REDES Y VOLÚMENES
+# ─────────────────────────────────────────
+networks:
+  clinica-net:
+    driver: bridge
 
 volumes:
   db_data:
